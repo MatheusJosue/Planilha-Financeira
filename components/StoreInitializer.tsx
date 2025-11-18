@@ -4,13 +4,13 @@ import { useEffect } from "react";
 import { useFinanceStore } from "@/store/financeStore";
 
 export function StoreInitializer() {
-  const { loadFromLocal, isLoaded } = useFinanceStore();
+  const { loadFromSupabase, isLoaded } = useFinanceStore();
 
   useEffect(() => {
     if (!isLoaded) {
-      loadFromLocal();
+      loadFromSupabase();
     }
-  }, [isLoaded, loadFromLocal]);
+  }, [isLoaded, loadFromSupabase]);
 
   return null;
 }

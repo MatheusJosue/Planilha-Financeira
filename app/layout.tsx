@@ -1,30 +1,34 @@
-import type { Metadata } from "next";
+"use client";
+
 import { Inter } from "next/font/google";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./globals.css";
 import { Navigation } from "@/components/Navigation";
 import { StoreInitializer } from "@/components/StoreInitializer";
 import { FloatingAddButton } from "@/components/FloatingAddButton";
+import { usePathname } from "next/navigation";
 
 const inter = Inter({ subsets: ["latin"] });
-
-export const metadata: Metadata = {
-  title: "Planilha Financeira",
-  description: "Controle suas finanças pessoais de forma simples e eficiente",
-};
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const pathname = usePathname();
+  const isAuthPage = pathname === "/login" || pathname.startsWith("/auth");
+
   return (
     <html lang="pt-BR">
       <body className={inter.className}>
         <StoreInitializer />
-        <Navigation />
-        <main className="container py-4">{children}</main>
-        <FloatingAddButton />
+        {!isAuthPage && <Navigation />}
+        {!isAuthPage ? (
+          <main className="container py-4">{children}</main>
+        ) : (
+          children
+        )}
+        {!isAuthPage && <FloatingAddButton />}
       </body>
     </html>
   );

@@ -39,7 +39,7 @@ export default function SettingsPage() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         const data = JSON.parse(event.target?.result as string);
         if (data.transactions && data.categories) {
@@ -48,7 +48,7 @@ export default function SettingsPage() {
               "Isso substituirá todos os dados atuais. Deseja continuar?"
             )
           ) {
-            importData(data);
+            await importData(data);
             alert("Dados importados com sucesso!");
           }
         } else {
@@ -65,18 +65,18 @@ export default function SettingsPage() {
     }
   };
 
-  const handleAddCategory = () => {
+  const handleAddCategory = async () => {
     if (newCategory.trim()) {
       if (categories.includes(newCategory.trim())) {
         alert("Esta categoria já existe!");
         return;
       }
-      addCategory(newCategory.trim());
+      await addCategory(newCategory.trim());
       setNewCategory("");
     }
   };
 
-  const handleDeleteCategory = (category: string) => {
+  const handleDeleteCategory = async (category: string) => {
     const usedInTransactions = transactions.some(
       (t) => t.category === category
     );
@@ -88,11 +88,11 @@ export default function SettingsPage() {
     }
 
     if (window.confirm(`Deseja realmente excluir a categoria "${category}"?`)) {
-      deleteCategory(category);
+      await deleteCategory(category);
     }
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     if (
       window.confirm(
         "⚠️ ATENÇÃO: Isso apagará TODAS as suas transações e categorias customizadas. Esta ação não pode ser desfeita!"
@@ -103,7 +103,7 @@ export default function SettingsPage() {
           "Tem certeza absoluta? Todos os seus dados serão perdidos!"
         )
       ) {
-        clearAllData();
+        await clearAllData();
         alert("Todos os dados foram apagados!");
       }
     }

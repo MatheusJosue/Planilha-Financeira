@@ -1,12 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Navbar, Nav, Container } from "react-bootstrap";
-import { FiHome, FiList, FiSettings, FiTrendingUp } from "react-icons/fi";
+import { usePathname, useRouter } from "next/navigation";
+import { Navbar, Nav, Container, Dropdown } from "react-bootstrap";
+import {
+  FiHome,
+  FiList,
+  FiSettings,
+  FiTrendingUp,
+  FiLogOut,
+  FiUser,
+} from "react-icons/fi";
+import { useAuth } from "@/hooks/useAuth";
 
 export function Navigation() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push("/login");
+  };
 
   return (
     <Navbar
@@ -86,6 +101,41 @@ export function Navigation() {
             >
               <FiSettings size={18} /> Configurações
             </Nav.Link>
+
+            <Dropdown align="end">
+              <Dropdown.Toggle
+                variant="light"
+                id="user-dropdown"
+                className="d-flex align-items-center gap-2 px-3 py-2 rounded-3"
+                style={{
+                  background: "rgba(255, 255, 255, 0.2)",
+                  border: "none",
+                  color: "white",
+                }}
+              >
+                <FiUser size={18} />
+                <span className="d-none d-md-inline">
+                  {user?.user_metadata?.name || user?.email?.split("@")[0]}
+                </span>
+              </Dropdown.Toggle>
+
+              <Dropdown.Menu
+                style={{
+                  borderRadius: "10px",
+                  border: "2px solid #e2e8f0",
+                  padding: "8px",
+                }}
+              >
+                <Dropdown.Item
+                  onClick={handleSignOut}
+                  className="d-flex align-items-center gap-2 rounded-2"
+                  style={{ padding: "10px 12px" }}
+                >
+                  <FiLogOut size={18} />
+                  <span>Sair</span>
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
           </Nav>
         </Navbar.Collapse>
       </Container>

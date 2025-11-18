@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { Transaction, FinanceData, DEFAULT_CATEGORIES } from "@/types";
+import { createClient } from "@/lib/supabase-client";
 
 interface MonthData {
   transactions: Transaction[];
@@ -10,20 +11,17 @@ interface FinanceStore extends FinanceData {
   currentMonth: string;
   monthsData: Record<string, MonthData>;
   setCurrentMonth: (month: string) => void;
-  createNewMonth: (month: string, copyFromPrevious?: boolean) => void;
+  createNewMonth: (month: string, copyFromPrevious?: boolean) => Promise<void>;
   getAvailableMonths: () => string[];
-  loadFromLocal: () => void;
-  saveToLocal: () => void;
-  addTransaction: (transaction: Omit<Transaction, "id">) => void;
-  updateTransaction: (id: string, transaction: Partial<Transaction>) => void;
-  deleteTransaction: (id: string) => void;
-  addCategory: (category: string) => void;
-  deleteCategory: (category: string) => void;
-  importData: (data: FinanceData) => void;
-  clearAllData: () => void;
+  loadFromSupabase: () => Promise<void>;
+  addTransaction: (transaction: Omit<Transaction, "id">) => Promise<void>;
+  updateTransaction: (id: string, transaction: Partial<Transaction>) => Promise<void>;
+  deleteTransaction: (id: string) => Promise<void>;
+  addCategory: (category: string) => Promise<void>;
+  deleteCategory: (category: string) => Promise<void>;
+  importData: (data: FinanceData) => Promise<void>;
+  clearAllData: () => Promise<void>;
 }
-
-const STORAGE_KEY = "planilha-financeira-data";
 
 const getCurrentMonth = () => {
   const now = new Date();
@@ -53,7 +51,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     return Object.keys(state.monthsData).sort().reverse();
   },
 
-  createNewMonth: (month: string, copyFromPrevious = false) => {
+  createNewMonth: async (month: string, copyFromPrevious = false) => {
     const state = get();
     
     if (state.monthsData[month]) {
@@ -61,7 +59,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       return;
     }
 
-    let newTransactions: Transaction[] = [];
+    const newTransactions: Transaction[] = [];
 
     if (copyFromPrevious) {
       const months = Object.keys(state.monthsData).sort();
@@ -69,11 +67,43 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       
       if (previousMonth && state.monthsData[previousMonth]) {
         const prevTransactions = state.monthsData[previousMonth].transactions;
-        newTransactions = prevTransactions.map((t) => ({
-          ...t,
-          id: `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          date: t.date.replace(/^\d{4}-\d{2}/, month),
-        }));
+        
+        const supabaseClient = createClient();
+        const { data: { user } } = await supabaseClient.auth.getUser();
+
+        if (!user) {
+          alert("Você precisa estar logado.");
+          return;
+        }
+        
+        for (const t of prevTransactions) {
+          const newTransaction = {
+            description: t.description,
+            type: t.type,
+            category: t.category,
+            value: t.value,
+            date: t.date.replace(/^\d{4}-\d{2}/, month),
+            month: month,
+            user_id: user.id,
+          };
+
+          const { data, error } = await supabaseClient
+            .from('transactions')
+            .insert([newTransaction])
+            .select()
+            .single();
+
+          if (!error && data) {
+            newTransactions.push({
+              id: data.id,
+              description: data.description,
+              type: data.type as 'income' | 'expense',
+              category: data.category,
+              value: Number(data.value),
+              date: data.date,
+            });
+          }
+        }
       }
     }
 
@@ -85,99 +115,173 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       currentMonth: month,
       transactions: newTransactions,
     }));
-
-    get().saveToLocal();
   },
 
-  loadFromLocal: () => {
+  loadFromSupabase: async () => {
     if (typeof window === "undefined") return;
     
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const data = JSON.parse(stored);
-        const currentMonth = getCurrentMonth();
-        
-        if (data.transactions && !data.monthsData) {
-          const monthsData: Record<string, MonthData> = {};
-          
-          data.transactions.forEach((t: Transaction) => {
-            const month = t.date.substring(0, 7);
-            if (!monthsData[month]) {
-              monthsData[month] = { transactions: [] };
-            }
-            monthsData[month].transactions.push(t);
-          });
-
-          set({
-            monthsData,
-            currentMonth,
-            transactions: monthsData[currentMonth]?.transactions || [],
-            categories: data.categories || [...DEFAULT_CATEGORIES],
-            isLoaded: true,
-          });
-        } else {
-          set({
-            monthsData: data.monthsData || {},
-            currentMonth: data.currentMonth || currentMonth,
-            transactions: data.monthsData?.[data.currentMonth || currentMonth]?.transactions || [],
-            categories: data.categories || [...DEFAULT_CATEGORIES],
-            isLoaded: true,
-          });
-        }
-      } else {
-        const currentMonth = getCurrentMonth();
+      const supabaseClient = createClient();
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      
+      if (!user) {
         set({ 
           isLoaded: true,
-          currentMonth,
+          categories: [...DEFAULT_CATEGORIES],
+        });
+        return;
+      }
+
+      console.log("Loading data for user:", user.id);
+
+      const { data: categoriesData } = await supabaseClient
+        .from('categories')
+        .select('name')
+        .eq('user_id', user.id)
+        .order('name');
+
+      let categories: string[];
+      
+      if (!categoriesData || categoriesData.length === 0) {
+        for (const cat of DEFAULT_CATEGORIES) {
+          await supabaseClient
+            .from('categories')
+            .insert([{ name: cat, user_id: user.id }])
+            .select();
+        }
+        categories = [...DEFAULT_CATEGORIES];
+      } else {
+        categories = categoriesData.map(c => c.name);
+      }
+
+      const { data: transactionsData, error } = await supabaseClient
+        .from('transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false });
+
+      console.log("Transactions loaded:", transactionsData?.length || 0);
+
+      if (error) {
+        console.error("Error loading from Supabase:", error);
+        set({ 
+          isLoaded: true,
+          categories: [...DEFAULT_CATEGORIES],
+          currentMonth: getCurrentMonth(),
           monthsData: {
-            [currentMonth]: { transactions: [] }
+            [getCurrentMonth()]: { transactions: [] }
           }
         });
+        return;
       }
+
+      const monthsData: Record<string, MonthData> = {};
+      const currentMonth = getCurrentMonth();
+
+      if (transactionsData && transactionsData.length > 0) {
+        transactionsData.forEach((t: { id: string; description: string; type: string; category: string; value: number; date: string }) => {
+          const month = t.date.substring(0, 7);
+          if (!monthsData[month]) {
+            monthsData[month] = { transactions: [] };
+          }
+          monthsData[month].transactions.push({
+            id: t.id,
+            description: t.description,
+            type: t.type as 'income' | 'expense',
+            category: t.category,
+            value: Number(t.value),
+            date: t.date,
+          });
+        });
+      }
+
+      if (!monthsData[currentMonth]) {
+        monthsData[currentMonth] = { transactions: [] };
+      }
+
+      set({
+        monthsData,
+        currentMonth,
+        transactions: monthsData[currentMonth]?.transactions || [],
+        categories,
+        isLoaded: true,
+      });
     } catch (error) {
-      console.error("Error loading data from localStorage:", error);
-      set({ isLoaded: true });
+      console.error("Error loading data from Supabase:", error);
+      set({ 
+        isLoaded: true,
+        categories: [...DEFAULT_CATEGORIES],
+      });
     }
   },
 
-  saveToLocal: () => {
-    if (typeof window === "undefined") return;
-    
-    try {
-      const state = get();
-      const dataToSave = {
-        monthsData: state.monthsData,
-        currentMonth: state.currentMonth,
-        categories: state.categories,
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
-    } catch (error) {
-      console.error("Error saving data to localStorage:", error);
-    }
-  },
-
-  addTransaction: (transaction) => {
+  addTransaction: async (transaction) => {
     const state = get();
-    const newTransaction: Transaction = {
-      ...transaction,
-      id: `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    };
+    const month = transaction.date.substring(0, 7);
 
-    const updatedTransactions = [...state.transactions, newTransaction];
+    const supabaseClient = createClient();
+    const { data: { user } } = await supabaseClient.auth.getUser();
 
-    set((state) => ({
-      transactions: updatedTransactions,
-      monthsData: {
-        ...state.monthsData,
-        [state.currentMonth]: { transactions: updatedTransactions },
-      },
-    }));
-    
-    get().saveToLocal();
+    if (!user) {
+      alert("Você precisa estar logado para adicionar transações.");
+      return;
+    }
+
+    const { data, error } = await supabaseClient
+      .from('transactions')
+      .insert([{
+        description: transaction.description,
+        type: transaction.type,
+        category: transaction.category,
+        value: transaction.value,
+        date: transaction.date,
+        month: month,
+        user_id: user.id,
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error adding transaction:", error);
+      alert("Erro ao adicionar transação. Verifique sua conexão.");
+      return;
+    }
+
+    if (data) {
+      const newTransaction: Transaction = {
+        id: data.id,
+        description: data.description,
+        type: data.type as 'income' | 'expense',
+        category: data.category,
+        value: Number(data.value),
+        date: data.date,
+      };
+
+      const updatedTransactions = [...state.transactions, newTransaction];
+
+      set((state) => ({
+        transactions: updatedTransactions,
+        monthsData: {
+          ...state.monthsData,
+          [state.currentMonth]: { transactions: updatedTransactions },
+        },
+      }));
+    }
   },
 
-  updateTransaction: (id, updates) => {
+  updateTransaction: async (id, updates) => {
+    const supabaseClient = createClient();
+    const { error } = await supabaseClient
+      .from('transactions')
+      .update(updates)
+      .eq('id', id);
+
+    if (error) {
+      console.error("Error updating transaction:", error);
+      alert("Erro ao atualizar transação. Verifique sua conexão.");
+      return;
+    }
+
     const state = get();
     const updatedTransactions = state.transactions.map((t) =>
       t.id === id ? { ...t, ...updates } : t
@@ -190,11 +294,21 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
         [state.currentMonth]: { transactions: updatedTransactions },
       },
     }));
-    
-    get().saveToLocal();
   },
 
-  deleteTransaction: (id) => {
+  deleteTransaction: async (id) => {
+    const supabaseClient = createClient();
+    const { error } = await supabaseClient
+      .from('transactions')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error("Error deleting transaction:", error);
+      alert("Erro ao deletar transação. Verifique sua conexão.");
+      return;
+    }
+
     const state = get();
     const updatedTransactions = state.transactions.filter((t) => t.id !== id);
 
@@ -205,46 +319,152 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
         [state.currentMonth]: { transactions: updatedTransactions },
       },
     }));
-    
-    get().saveToLocal();
   },
 
-  addCategory: (category) => {
-    set((state) => {
-      if (state.categories.includes(category)) {
-        return state;
+  addCategory: async (category) => {
+    const state = get();
+    if (state.categories.includes(category)) {
+      return;
+    }
+
+    const supabaseClient = createClient();
+    const { data: { user } } = await supabaseClient.auth.getUser();
+
+    if (!user) {
+      alert("Você precisa estar logado para adicionar categorias.");
+      return;
+    }
+
+    const { error } = await supabaseClient
+      .from('categories')
+      .insert([{ name: category, user_id: user.id }]);
+
+    if (error) {
+      if (error.code === '23505') {
+        console.log("Category already exists");
+        set((state) => ({
+          categories: [...state.categories, category],
+        }));
+        return;
       }
-      return {
-        categories: [...state.categories, category],
-      };
-    });
-    
-    get().saveToLocal();
+      console.error("Error adding category:", error);
+      alert("Erro ao adicionar categoria. Verifique sua conexão.");
+      return;
+    }
+
+    set((state) => ({
+      categories: [...state.categories, category],
+    }));
   },
 
-  deleteCategory: (category) => {
+  deleteCategory: async (category) => {
+    const supabaseClient = createClient();
+    const { error } = await supabaseClient
+      .from('categories')
+      .delete()
+      .eq('name', category);
+
+    if (error) {
+      console.error("Error deleting category:", error);
+      alert("Erro ao deletar categoria. Verifique sua conexão.");
+      return;
+    }
+
     set((state) => ({
       categories: state.categories.filter((c) => c !== category),
     }));
-    
-    get().saveToLocal();
   },
 
-  importData: (data) => {
-    set({
-      transactions: data.transactions || [],
-      categories: data.categories || [...DEFAULT_CATEGORIES],
-    });
-    
-    get().saveToLocal();
+  importData: async (data) => {
+    const supabaseClient = createClient();
+    const { data: { user } } = await supabaseClient.auth.getUser();
+
+    if (!user) {
+      alert("Você precisa estar logado para importar dados.");
+      return;
+    }
+
+    try {
+      if (data.categories && data.categories.length > 0) {
+        for (const cat of data.categories) {
+          const { error } = await supabaseClient
+            .from('categories')
+            .insert([{ name: cat, user_id: user.id }])
+            .select();
+          
+          if (error && error.code !== '23505') {
+            console.error("Error importing category:", error);
+          }
+        }
+      }
+
+      if (data.transactions && data.transactions.length > 0) {
+        const transactionsToInsert = data.transactions.map(t => ({
+          description: t.description,
+          type: t.type,
+          category: t.category,
+          value: t.value,
+          date: t.date,
+          month: t.date.substring(0, 7),
+          user_id: user.id,
+        }));
+
+        const { error } = await supabaseClient
+          .from('transactions')
+          .insert(transactionsToInsert);
+
+        if (error) {
+          console.error("Error importing transactions:", error);
+          alert(`Erro ao importar transações: ${error.message}`);
+          return;
+        }
+      }
+
+      await get().loadFromSupabase();
+      alert("Dados importados com sucesso!");
+    } catch (error) {
+      console.error("Import error:", error);
+      alert("Erro ao importar dados. Verifique o console.");
+    }
   },
 
-  clearAllData: () => {
+  clearAllData: async () => {
+    const supabaseClient = createClient();
+    const { data: { user } } = await supabaseClient.auth.getUser();
+
+    if (!user) {
+      alert("Você precisa estar logado.");
+      return;
+    }
+
+    const { error: transactionsError } = await supabaseClient
+      .from('transactions')
+      .delete()
+      .eq('user_id', user.id);
+
+    const { error: categoriesError } = await supabaseClient
+      .from('categories')
+      .delete()
+      .eq('user_id', user.id);
+
+    if (transactionsError || categoriesError) {
+      console.error("Error clearing data:", transactionsError || categoriesError);
+      alert("Erro ao limpar dados. Verifique sua conexão.");
+      return;
+    }
+
+    for (const cat of DEFAULT_CATEGORIES) {
+      await supabaseClient
+        .from('categories')
+        .insert([{ name: cat, user_id: user.id }]);
+    }
+
     set({
       transactions: [],
       categories: [...DEFAULT_CATEGORIES],
+      monthsData: {},
     });
-    
-    get().saveToLocal();
+
+    await get().loadFromSupabase();
   },
 }));
