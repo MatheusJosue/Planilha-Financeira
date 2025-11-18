@@ -5,6 +5,12 @@ import { Card, Button, Form, Badge, Row, Col, Alert } from "react-bootstrap";
 import { FiDownload, FiUpload, FiTrash2, FiPlus } from "react-icons/fi";
 import { useFinanceStore } from "@/store/financeStore";
 import { DEFAULT_CATEGORIES } from "@/types";
+import {
+  showSuccess,
+  showError,
+  showWarning,
+  showConfirm,
+} from "@/lib/sweetalert";
 
 export default function SettingsPage() {
   const {
@@ -43,19 +49,18 @@ export default function SettingsPage() {
       try {
         const data = JSON.parse(event.target?.result as string);
         if (data.transactions && data.categories) {
-          if (
-            window.confirm(
-              "Isso substituirá todos os dados atuais. Deseja continuar?"
-            )
-          ) {
+          const result = await showConfirm(
+            "Isso substituirá todos os dados atuais. Deseja continuar?",
+            "Importar dados?"
+          );
+          if (result.isConfirmed) {
             await importData(data);
-            alert("Dados importados com sucesso!");
           }
         } else {
-          alert("Arquivo inválido!");
+          showError("Arquivo inválido!");
         }
       } catch {
-        alert("Erro ao ler o arquivo!");
+        showError("Erro ao ler o arquivo!");
       }
     };
     reader.readAsText(file);
@@ -68,7 +73,7 @@ export default function SettingsPage() {
   const handleAddCategory = async () => {
     if (newCategory.trim()) {
       if (categories.includes(newCategory.trim())) {
-        alert("Esta categoria já existe!");
+        showWarning("Esta categoria já existe!");
         return;
       }
       await addCategory(newCategory.trim());
@@ -81,30 +86,36 @@ export default function SettingsPage() {
       (t) => t.category === category
     );
     if (usedInTransactions) {
-      alert(
+      showWarning(
         "Não é possível excluir uma categoria que está sendo usada em transações!"
       );
       return;
     }
 
-    if (window.confirm(`Deseja realmente excluir a categoria "${category}"?`)) {
+    const result = await showConfirm(
+      `Deseja realmente excluir a categoria "${category}"?`,
+      "Excluir categoria?"
+    );
+    if (result.isConfirmed) {
       await deleteCategory(category);
     }
   };
 
   const handleClearAll = async () => {
-    if (
-      window.confirm(
-        "⚠️ ATENÇÃO: Isso apagará TODAS as suas transações e categorias customizadas. Esta ação não pode ser desfeita!"
-      )
-    ) {
-      if (
-        window.confirm(
-          "Tem certeza absoluta? Todos os seus dados serão perdidos!"
-        )
-      ) {
+    const result1 = await showConfirm(
+      "⚠️ ATENÇÃO: Isso apagará TODAS as suas transações e categorias customizadas. Esta ação não pode ser desfeita!",
+      "Limpar todos os dados?"
+    );
+
+    if (result1.isConfirmed) {
+      const result2 = await showConfirm(
+        "Tem certeza absoluta? Todos os seus dados serão perdidos!",
+        "Última confirmação"
+      );
+
+      if (result2.isConfirmed) {
         await clearAllData();
-        alert("Todos os dados foram apagados!");
+        showSuccess("Todos os dados foram apagados!");
       }
     }
   };

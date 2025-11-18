@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Table, Button, Badge, Form, InputGroup } from "react-bootstrap";
 import { FiEdit, FiTrash2, FiSearch, FiMenu } from "react-icons/fi";
+import { showConfirm } from "@/lib/sweetalert";
 import {
   DndContext,
   closestCenter,
@@ -194,8 +195,12 @@ export function TransactionList({ onEdit }: TransactionListProps) {
     }
   };
 
-  const handleDelete = (id: string, description: string) => {
-    if (window.confirm(`Deseja realmente excluir "${description}"?`)) {
+  const handleDelete = async (id: string, description: string) => {
+    const result = await showConfirm(
+      `Deseja realmente excluir "${description}"?`,
+      "Excluir transação?"
+    );
+    if (result.isConfirmed) {
       deleteTransaction(id);
     }
   };

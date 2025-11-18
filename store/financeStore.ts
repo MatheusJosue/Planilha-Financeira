@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { Transaction, FinanceData, DEFAULT_CATEGORIES } from "@/types";
 import { createClient } from "@/lib/supabase-client";
+import { showError, showSuccess } from "@/lib/sweetalert";
 
 interface MonthData {
   transactions: Transaction[];
@@ -72,7 +73,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
         const { data: { user } } = await supabaseClient.auth.getUser();
 
         if (!user) {
-          alert("Você precisa estar logado.");
+          showError("Você precisa estar logado.");
           return;
         }
         
@@ -223,7 +224,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     const { data: { user } } = await supabaseClient.auth.getUser();
 
     if (!user) {
-      alert("Você precisa estar logado para adicionar transações.");
+      showError("Você precisa estar logado para adicionar transações.");
       return;
     }
 
@@ -243,7 +244,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
 
     if (error) {
       console.error("Error adding transaction:", error);
-      alert("Erro ao adicionar transação. Verifique sua conexão.");
+      showError("Erro ao adicionar transação. Verifique sua conexão.");
       return;
     }
 
@@ -278,7 +279,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
 
     if (error) {
       console.error("Error updating transaction:", error);
-      alert("Erro ao atualizar transação. Verifique sua conexão.");
+      showError("Erro ao atualizar transação. Verifique sua conexão.");
       return;
     }
 
@@ -305,7 +306,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
 
     if (error) {
       console.error("Error deleting transaction:", error);
-      alert("Erro ao deletar transação. Verifique sua conexão.");
+      showError("Erro ao deletar transação. Verifique sua conexão.");
       return;
     }
 
@@ -331,7 +332,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     const { data: { user } } = await supabaseClient.auth.getUser();
 
     if (!user) {
-      alert("Você precisa estar logado para adicionar categorias.");
+      showError("Você precisa estar logado para adicionar categorias.");
       return;
     }
 
@@ -348,7 +349,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
         return;
       }
       console.error("Error adding category:", error);
-      alert("Erro ao adicionar categoria. Verifique sua conexão.");
+      showError("Erro ao adicionar categoria. Verifique sua conexão.");
       return;
     }
 
@@ -366,7 +367,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
 
     if (error) {
       console.error("Error deleting category:", error);
-      alert("Erro ao deletar categoria. Verifique sua conexão.");
+      showError("Erro ao deletar categoria. Verifique sua conexão.");
       return;
     }
 
@@ -380,7 +381,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     const { data: { user } } = await supabaseClient.auth.getUser();
 
     if (!user) {
-      alert("Você precisa estar logado para importar dados.");
+      showError("Você precisa estar logado para importar dados.");
       return;
     }
 
@@ -415,16 +416,16 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
 
         if (error) {
           console.error("Error importing transactions:", error);
-          alert(`Erro ao importar transações: ${error.message}`);
+          showError(`Erro ao importar transações: ${error.message}`);
           return;
         }
       }
 
       await get().loadFromSupabase();
-      alert("Dados importados com sucesso!");
+      showSuccess("Dados importados com sucesso!");
     } catch (error) {
       console.error("Import error:", error);
-      alert("Erro ao importar dados. Verifique o console.");
+      showError("Erro ao importar dados. Verifique o console.");
     }
   },
 
@@ -433,7 +434,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     const { data: { user } } = await supabaseClient.auth.getUser();
 
     if (!user) {
-      alert("Você precisa estar logado.");
+      showError("Você precisa estar logado.");
       return;
     }
 
@@ -449,7 +450,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
 
     if (transactionsError || categoriesError) {
       console.error("Error clearing data:", transactionsError || categoriesError);
-      alert("Erro ao limpar dados. Verifique sua conexão.");
+      showError("Erro ao limpar dados. Verifique sua conexão.");
       return;
     }
 

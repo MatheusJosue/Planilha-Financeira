@@ -5,6 +5,7 @@ import { Modal, Button, Form } from "react-bootstrap";
 import { Transaction, TransactionType } from "@/types";
 import { useFinanceStore } from "@/store/financeStore";
 import { getTodayISO } from "@/utils/formatDate";
+import { showWarning } from "@/lib/sweetalert";
 
 interface TransactionFormProps {
   show: boolean;
@@ -52,12 +53,12 @@ export function TransactionForm({
 
     const value = parseFloat(formData.value);
     if (isNaN(value) || value <= 0) {
-      alert("Por favor, insira um valor válido");
+      showWarning("Por favor, insira um valor válido");
       return;
     }
 
     if (!formData.description.trim()) {
-      alert("Por favor, insira uma descrição");
+      showWarning("Por favor, insira uma descrição");
       return;
     }
 
