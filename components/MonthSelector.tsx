@@ -233,31 +233,53 @@ const NavigationButton = ({
 
 interface MonthBadgeProps {
   currentMonth: string;
+  onClick?: () => void;
 }
 
-const MonthBadge = ({ currentMonth }: MonthBadgeProps) => (
-  <div
-    className="d-flex align-items-center justify-content-center gap-2"
-    role="status"
-    aria-live="polite"
-    aria-label={`Mês atual: ${formatMonth(currentMonth, "long")}`}
-    style={{
-      cursor: "default",
-      padding: "10px 20px",
-      fontSize: "1rem",
-      fontWeight: "bold",
-      backgroundColor: COLORS.primary, // roxo #667eea
-      color: "#ffffff",
-      minWidth: "160px",
-      border: "none",
-      borderRadius: 999,
-      boxShadow: "0 2px 8px rgba(102, 126, 234, 0.35)",
-    }}
-  >
-    <FiCalendar size={16} aria-hidden="true" />
-    <span>{formatMonth(currentMonth)}</span>
-  </div>
-);
+const MonthBadge = ({ currentMonth, onClick }: MonthBadgeProps) => {
+  const isClickable = !!onClick;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="d-flex align-items-center justify-content-center gap-2"
+      role="button"
+      aria-live="polite"
+      aria-label={`Selecionar mês: ${formatMonth(currentMonth, "long")}`}
+      style={{
+        cursor: isClickable ? "pointer" : "default",
+        padding: "10px 20px",
+        fontSize: "1rem",
+        fontWeight: "bold",
+        backgroundColor: COLORS.primary,
+        color: "#ffffff",
+        minWidth: "160px",
+        border: "none",
+        borderRadius: 999,
+        boxShadow: "0 2px 8px rgba(102, 126, 234, 0.35)",
+        transition: ANIMATION_CONFIG.transition,
+      }}
+      onMouseEnter={(e) => {
+        if (!isClickable) return;
+        (e.currentTarget as HTMLButtonElement).style.boxShadow =
+          "0 4px 12px rgba(102, 126, 234, 0.55)";
+        (e.currentTarget as HTMLButtonElement).style.transform =
+          "translateY(-1px)";
+      }}
+      onMouseLeave={(e) => {
+        if (!isClickable) return;
+        (e.currentTarget as HTMLButtonElement).style.boxShadow =
+          "0 2px 8px rgba(102, 126, 234, 0.35)";
+        (e.currentTarget as HTMLButtonElement).style.transform =
+          "translateY(0)";
+      }}
+    >
+      <FiCalendar size={16} aria-hidden="true" />
+      <span>{formatMonth(currentMonth)}</span>
+    </button>
+  );
+};
 
 interface ValidationMessageProps {
   isValid: boolean;
@@ -391,6 +413,8 @@ export function MonthSelector() {
   const [newMonthValue, setNewMonthValue] = useState("");
   const [copyPrevious, setCopyPrevious] = useState(false);
 
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+
   const availableMonths = useMemo(() => getAvailableMonths(), [monthsData]);
 
   const isMonthDuplicate = useMemo(
@@ -474,7 +498,10 @@ export function MonthSelector() {
             disabled={!canGoPrev}
           />
 
-          <MonthBadge currentMonth={currentMonth} />
+          <MonthBadge
+            currentMonth={currentMonth}
+            onClick={() => setShowMonthPicker(true)} // << NOVO
+          />
 
           <NavigationButton
             direction="next"
@@ -614,6 +641,95 @@ export function MonthSelector() {
             Criar Mês
           </PrimaryButton>
         </Modal.Footer>
+      </Modal>
+
+      {/* Modal Seletor de Meses */}
+      <Modal
+        show={showMonthPicker}
+        onHide={() => setShowMonthPicker(false)}
+        centered
+        data-bs-theme="dark"
+        aria-labelledby="month-picker-title"
+      >
+        <Modal.Header
+          closeButton
+          style={{
+            backgroundColor: "var(--card-bg)",
+            color: "var(--foreground)",
+            borderBottom: "1px solid var(--border-color)",
+          }}
+        >
+          <Modal.Title
+            id="month-picker-title"
+            className="d-flex align-items-center gap-2"
+          >
+            <FiCalendar size={20} />
+            <span style={{ fontWeight: 600 }}>Selecionar Mês</span>
+          </Modal.Title>
+        </Modal.Header>
+
+        <Modal.Body
+          className="p-3"
+          style={{
+            backgroundColor: "var(--card-bg)",
+            color: "var(--foreground)",
+          }}
+        >
+          {availableMonths.length === 0 ? (
+            <p style={{ color: "var(--text-muted)" }}>
+              Nenhum mês cadastrado ainda.
+            </p>
+          ) : (
+            <div
+              className="d-flex flex-wrap gap-2"
+              aria-label="Lista de meses disponíveis"
+            >
+              {availableMonths.map((month) => (
+                <button
+                  key={month}
+                  type="button"
+                  onClick={() => {
+                    setCurrentMonth(month);
+                    setShowMonthPicker(false);
+                  }}
+                  className="px-3 py-2"
+                  style={{
+                    borderRadius: 999,
+                    border:
+                      month === currentMonth
+                        ? "2px solid #ffffff"
+                        : "1px solid var(--border-color)",
+                    backgroundColor:
+                      month === currentMonth
+                        ? COLORS.primary
+                        : "var(--input-bg)",
+                    color:
+                      month === currentMonth ? "#ffffff" : "var(--foreground)",
+                    fontWeight: month === currentMonth ? 700 : 500,
+                    fontSize: "0.9rem",
+                    cursor: "pointer",
+                    transition: ANIMATION_CONFIG.transition,
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.transform =
+                      "translateY(-1px)";
+                    (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                      "0 3px 8px rgba(0, 0, 0, 0.25)";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.transform =
+                      "translateY(0)";
+                    (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                      "none";
+                  }}
+                  aria-label={`Ir para ${formatMonth(month, "long")}`}
+                >
+                  {formatMonth(month)}
+                </button>
+              ))}
+            </div>
+          )}
+        </Modal.Body>
       </Modal>
     </>
   );
