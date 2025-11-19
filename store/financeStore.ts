@@ -37,13 +37,19 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
   monthsData: {},
 
   setCurrentMonth: (month: string) => {
-    set({ currentMonth: month });
     const state = get();
     const monthData = state.monthsData[month];
+    
     if (monthData) {
-      set({ transactions: monthData.transactions });
+      set({ 
+        currentMonth: month,
+        transactions: monthData.transactions 
+      });
     } else {
-      set({ transactions: [] });
+      set({ 
+        currentMonth: month,
+        transactions: [] 
+      });
     }
   },
 
@@ -144,13 +150,25 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       let categories: string[];
       
       if (!categoriesData || categoriesData.length === 0) {
-        for (const cat of DEFAULT_CATEGORIES) {
-          await supabaseClient
-            .from('categories')
-            .insert([{ name: cat, user_id: user.id }])
-            .select();
+        const { data: insertedCategories, error: insertError } = await supabaseClient
+          .from('categories')
+          .upsert(
+            DEFAULT_CATEGORIES.map(cat => ({ 
+              name: cat, 
+              user_id: user.id 
+            })),
+            { 
+              onConflict: 'name',
+              ignoreDuplicates: true 
+            }
+          )
+          .select('name');
+        
+        if (insertError) {
+          console.error("Error upserting categories:", insertError);
         }
-        categories = [...DEFAULT_CATEGORIES];
+        
+        categories = insertedCategories?.map(c => c.name) || [...DEFAULT_CATEGORIES];
       } else {
         categories = categoriesData.map(c => c.name);
       }
@@ -455,9 +473,13 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     }
 
     for (const cat of DEFAULT_CATEGORIES) {
-      await supabaseClient
+      const { error } = await supabaseClient
         .from('categories')
         .insert([{ name: cat, user_id: user.id }]);
+      
+      if (error && error.code !== '23505') {
+        console.error("Error inserting category:", error);
+      }
     }
 
     set({

@@ -12,13 +12,22 @@ import {
 import { useFinanceStore } from "@/store/financeStore";
 
 export function MonthSelector() {
-  const { currentMonth, setCurrentMonth, createNewMonth, getAvailableMonths } =
-    useFinanceStore();
+  const {
+    currentMonth,
+    setCurrentMonth,
+    createNewMonth,
+    getAvailableMonths,
+    monthsData,
+  } = useFinanceStore();
   const [showModal, setShowModal] = useState(false);
   const [newMonthValue, setNewMonthValue] = useState("");
   const [copyPrevious, setCopyPrevious] = useState(false);
 
   const availableMonths = getAvailableMonths();
+
+  console.log("📅 Current month:", currentMonth);
+  console.log("📋 Available months:", availableMonths);
+  console.log("🗂️ Months data keys:", Object.keys(monthsData || {}));
 
   const formatMonth = (month: string) => {
     const [year, monthNum] = month.split("-");

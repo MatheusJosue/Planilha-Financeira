@@ -6,8 +6,12 @@ import { ExpensesByCategoryChart } from "@/components/Charts/ExpensesByCategoryC
 import { FinancialStats } from "@/components/FinancialStats";
 import { IncomeVsExpenseChart } from "@/components/Charts/IncomeVsExpenseChart";
 import { MonthSelector } from "@/components/MonthSelector";
+import { DashboardSkeleton } from "@/components/DashboardSkeleton";
+import { useFinanceStore } from "@/store/financeStore";
 
 export default function DashboardPage() {
+  const { isLoaded } = useFinanceStore();
+
   return (
     <div className="animate-fade-in">
       <div className="mb-4">
@@ -17,33 +21,42 @@ export default function DashboardPage() {
         <p className="text-muted">Acompanhe suas finanças em tempo real</p>
       </div>
 
-      <MonthSelector />
+      {isLoaded && <MonthSelector />}
 
-      <SummaryCards />
+      {!isLoaded ? (
+        <DashboardSkeleton />
+      ) : (
+        <>
+          <SummaryCards />
 
-      <Row className="g-4">
-        <Col lg={6}>
-          <div
-            className="animate-fade-in h-100"
-            style={{ animationDelay: "0.3s" }}
-          >
-            <ExpensesByCategoryChart />
-          </div>
-        </Col>
-        <Col lg={6}>
-          <div
-            className="animate-fade-in h-100"
-            style={{ animationDelay: "0.4s" }}
-          >
-            <IncomeVsExpenseChart />
-          </div>
-        </Col>
-        <Col lg={12}>
-          <div className="animate-fade-in" style={{ animationDelay: "0.5s" }}>
-            <FinancialStats />
-          </div>
-        </Col>
-      </Row>
+          <Row className="g-4">
+            <Col lg={6}>
+              <div
+                className="animate-fade-in h-100"
+                style={{ animationDelay: "0.3s" }}
+              >
+                <ExpensesByCategoryChart />
+              </div>
+            </Col>
+            <Col lg={6}>
+              <div
+                className="animate-fade-in h-100"
+                style={{ animationDelay: "0.4s" }}
+              >
+                <IncomeVsExpenseChart />
+              </div>
+            </Col>
+            <Col lg={12}>
+              <div
+                className="animate-fade-in"
+                style={{ animationDelay: "0.5s" }}
+              >
+                <FinancialStats />
+              </div>
+            </Col>
+          </Row>
+        </>
+      )}
     </div>
   );
 }

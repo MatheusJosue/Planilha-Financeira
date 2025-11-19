@@ -212,8 +212,6 @@ export function TransactionList({ onEdit }: TransactionListProps) {
           <InputGroup style={{ borderRadius: "10px", overflow: "hidden" }}>
             <InputGroup.Text
               style={{
-                background: "#f8f9fa",
-                border: "2px solid #e2e8f0",
                 borderRight: "none",
               }}
             >
@@ -223,7 +221,7 @@ export function TransactionList({ onEdit }: TransactionListProps) {
               placeholder="Buscar transação..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ border: "2px solid #e2e8f0", borderLeft: "none" }}
+              style={{ borderLeft: "none" }}
             />
           </InputGroup>
         </div>
@@ -236,7 +234,6 @@ export function TransactionList({ onEdit }: TransactionListProps) {
             }
             style={{
               borderRadius: "10px",
-              border: "2px solid #e2e8f0",
               padding: "0.5rem",
             }}
           >
@@ -252,7 +249,6 @@ export function TransactionList({ onEdit }: TransactionListProps) {
             onChange={(e) => setFilterCategory(e.target.value)}
             style={{
               borderRadius: "10px",
-              border: "2px solid #e2e8f0",
               padding: "0.5rem",
             }}
           >
@@ -271,7 +267,6 @@ export function TransactionList({ onEdit }: TransactionListProps) {
             onChange={(e) => setFilterMonth(e.target.value)}
             style={{
               borderRadius: "10px",
-              border: "2px solid #e2e8f0",
               padding: "0.5rem",
             }}
           >
@@ -295,14 +290,9 @@ export function TransactionList({ onEdit }: TransactionListProps) {
           style={{
             borderRadius: "16px",
             overflow: "hidden",
-            border: "2px solid #e2e8f0",
           }}
         >
-          <Table
-            hover
-            className="align-middle mb-0"
-            style={{ background: "white" }}
-          >
+          <Table hover responsive className="align-middle mb-0">
             <thead
               style={{
                 background:

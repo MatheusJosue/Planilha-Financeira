@@ -17,6 +17,7 @@ import { createClient } from "@/lib/supabase-client";
 export default function LoginPage() {
   const router = useRouter();
   const [isLogin, setIsLogin] = useState(true);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -83,6 +84,34 @@ export default function LoginPage() {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setMessage("");
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      });
+
+      if (error) throw error;
+
+      setMessage(
+        "Email de recuperação enviado! Verifique sua caixa de entrada."
+      );
+      setEmail("");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Erro ao enviar email de recuperação"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div
       style={{
@@ -126,10 +155,16 @@ export default function LoginPage() {
               <Card.Body className="p-4 p-md-5">
                 <div className="text-center mb-4">
                   <h3 className="fw-bold mb-2">
-                    {isLogin ? "Entrar" : "Criar Conta"}
+                    {isForgotPassword
+                      ? "Recuperar Senha"
+                      : isLogin
+                      ? "Entrar"
+                      : "Criar Conta"}
                   </h3>
                   <p className="text-muted small">
-                    {isLogin
+                    {isForgotPassword
+                      ? "Insira seu email para receber o link de recuperação"
+                      : isLogin
                       ? "Acesse sua conta para continuar"
                       : "Preencha os dados para criar sua conta"}
                   </p>
@@ -147,18 +182,25 @@ export default function LoginPage() {
                   </Alert>
                 )}
 
-                <Form onSubmit={isLogin ? handleLogin : handleSignUp}>
+                <Form
+                  onSubmit={
+                    isForgotPassword
+                      ? handleForgotPassword
+                      : isLogin
+                      ? handleLogin
+                      : handleSignUp
+                  }
+                >
                   {!isLogin && (
                     <Form.Group className="mb-3">
                       <Form.Label className="fw-semibold">Nome</Form.Label>
                       <div className="position-relative">
                         <FiUser
-                          className="position-absolute"
+                          className="position-absolute login-icon"
                           style={{
                             left: "12px",
                             top: "50%",
                             transform: "translateY(-50%)",
-                            color: "#667eea",
                           }}
                           size={20}
                         />
@@ -168,6 +210,7 @@ export default function LoginPage() {
                           value={name}
                           onChange={(e) => setName(e.target.value)}
                           required
+                          className="login-input"
                           style={{
                             paddingLeft: "40px",
                             borderRadius: "10px",
@@ -183,12 +226,11 @@ export default function LoginPage() {
                     <Form.Label className="fw-semibold">Email</Form.Label>
                     <div className="position-relative">
                       <FiMail
-                        className="position-absolute"
+                        className="position-absolute login-icon"
                         style={{
                           left: "12px",
                           top: "50%",
                           transform: "translateY(-50%)",
-                          color: "#667eea",
                         }}
                         size={20}
                       />
@@ -198,6 +240,7 @@ export default function LoginPage() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
+                        className="login-input"
                         style={{
                           paddingLeft: "40px",
                           borderRadius: "10px",
@@ -208,40 +251,58 @@ export default function LoginPage() {
                     </div>
                   </Form.Group>
 
-                  <Form.Group className="mb-4">
-                    <Form.Label className="fw-semibold">Senha</Form.Label>
-                    <div className="position-relative">
-                      <FiLock
-                        className="position-absolute"
-                        style={{
-                          left: "12px",
-                          top: "50%",
-                          transform: "translateY(-50%)",
-                          color: "#667eea",
-                        }}
-                        size={20}
-                      />
-                      <Form.Control
-                        type="password"
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        minLength={6}
-                        style={{
-                          paddingLeft: "40px",
-                          borderRadius: "10px",
-                          border: "2px solid #e2e8f0",
-                          padding: "12px 12px 12px 40px",
-                        }}
-                      />
-                    </div>
-                    {!isLogin && (
-                      <Form.Text className="text-muted">
-                        Mínimo de 6 caracteres
-                      </Form.Text>
-                    )}
-                  </Form.Group>
+                  {!isForgotPassword && (
+                    <Form.Group className="mb-4">
+                      <Form.Label className="fw-semibold">Senha</Form.Label>
+                      <div className="position-relative">
+                        <FiLock
+                          className="position-absolute login-icon"
+                          style={{
+                            left: "12px",
+                            top: "50%",
+                            transform: "translateY(-50%)",
+                          }}
+                          size={20}
+                        />
+                        <Form.Control
+                          type="password"
+                          placeholder="••••••••"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          required
+                          minLength={6}
+                          className="login-input"
+                          style={{
+                            paddingLeft: "40px",
+                            borderRadius: "10px",
+                            border: "2px solid #e2e8f0",
+                            padding: "12px 12px 12px 40px",
+                          }}
+                        />
+                      </div>
+                      {!isLogin && (
+                        <Form.Text className="text-muted">
+                          Mínimo de 6 caracteres
+                        </Form.Text>
+                      )}
+                      {isLogin && (
+                        <div className="text-end mt-2">
+                          <Button
+                            variant="link"
+                            className="text-decoration-none p-0 small"
+                            onClick={() => {
+                              setIsForgotPassword(true);
+                              setError("");
+                              setMessage("");
+                            }}
+                            style={{ color: "#667eea", fontWeight: "500" }}
+                          >
+                            Esqueceu a senha?
+                          </Button>
+                        </div>
+                      )}
+                    </Form.Group>
+                  )}
 
                   <Button
                     type="submit"
@@ -259,26 +320,43 @@ export default function LoginPage() {
                   >
                     {loading
                       ? "Processando..."
+                      : isForgotPassword
+                      ? "Enviar Email de Recuperação"
                       : isLogin
                       ? "Entrar"
                       : "Criar Conta"}
                   </Button>
 
                   <div className="text-center">
-                    <Button
-                      variant="link"
-                      className="text-decoration-none"
-                      onClick={() => {
-                        setIsLogin(!isLogin);
-                        setError("");
-                        setMessage("");
-                      }}
-                      style={{ color: "#667eea", fontWeight: "500" }}
-                    >
-                      {isLogin
-                        ? "Não tem conta? Cadastre-se"
-                        : "Já tem conta? Faça login"}
-                    </Button>
+                    {isForgotPassword ? (
+                      <Button
+                        variant="link"
+                        className="text-decoration-none"
+                        onClick={() => {
+                          setIsForgotPassword(false);
+                          setError("");
+                          setMessage("");
+                        }}
+                        style={{ color: "#667eea", fontWeight: "500" }}
+                      >
+                        Voltar para o login
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="link"
+                        className="text-decoration-none"
+                        onClick={() => {
+                          setIsLogin(!isLogin);
+                          setError("");
+                          setMessage("");
+                        }}
+                        style={{ color: "#667eea", fontWeight: "500" }}
+                      >
+                        {isLogin
+                          ? "Não tem conta? Cadastre-se"
+                          : "Já tem conta? Faça login"}
+                      </Button>
+                    )}
                   </div>
                 </Form>
               </Card.Body>

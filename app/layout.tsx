@@ -6,6 +6,7 @@ import "./globals.css";
 import { Navigation } from "@/components/Navigation";
 import { StoreInitializer } from "@/components/StoreInitializer";
 import { FloatingAddButton } from "@/components/FloatingAddButton";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import { usePathname } from "next/navigation";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -21,14 +22,16 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={inter.className}>
-        <StoreInitializer />
-        {!isAuthPage && <Navigation />}
-        {!isAuthPage ? (
-          <main className="container py-4">{children}</main>
-        ) : (
-          children
-        )}
-        {!isAuthPage && <FloatingAddButton />}
+        <ThemeProvider>
+          <StoreInitializer />
+          {!isAuthPage && <Navigation />}
+          {!isAuthPage ? (
+            <main className="container py-4">{children}</main>
+          ) : (
+            children
+          )}
+          {!isAuthPage && <FloatingAddButton />}
+        </ThemeProvider>
       </body>
     </html>
   );
