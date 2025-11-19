@@ -6,6 +6,7 @@ import "./globals.css";
 import { Navigation } from "@/components/Navigation";
 import { StoreInitializer } from "@/components/StoreInitializer";
 import { FloatingAddButton } from "@/components/FloatingAddButton";
+import PendingRecurringNotification from "@/components/PendingRecurringNotification";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { usePathname } from "next/navigation";
 
@@ -31,6 +32,7 @@ export default function RootLayout({
             children
           )}
           {!isAuthPage && <FloatingAddButton />}
+          {!isAuthPage && <PendingRecurringNotification />}
         </ThemeProvider>
       </body>
     </html>

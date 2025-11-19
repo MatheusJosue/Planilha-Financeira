@@ -141,12 +141,14 @@ export function MonthSelector() {
         <Button
           size="sm"
           onClick={() => setShowModal(true)}
+          className="d-flex align-items-center"
           style={{
             borderRadius: "10px",
             background: "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)",
             border: "none",
             padding: "8px 16px",
             fontWeight: "600",
+            whiteSpace: "nowrap",
           }}
         >
           <FiPlus className="me-1" size={16} />

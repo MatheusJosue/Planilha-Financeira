@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Navbar, Nav, Container, Dropdown } from "react-bootstrap";
+import {
+  Navbar,
+  Nav,
+  Container,
+  Dropdown,
+  Badge,
+  Button,
+} from "react-bootstrap";
 import {
   FiHome,
   FiList,
@@ -12,15 +19,38 @@ import {
   FiUser,
   FiMoon,
   FiSun,
+  FiRepeat,
+  FiBell,
 } from "react-icons/fi";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
+import { useFinanceStore } from "@/store/financeStore";
+import { useMemo } from "react";
 
 export function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { transactions } = useFinanceStore();
+
+  const pendingCount = useMemo(() => {
+    if (typeof window === "undefined") return 0;
+
+    const today = new Date();
+    const todayStr = today.toISOString().split("T")[0];
+
+    const pending = transactions.filter((t) => {
+      if (!t.is_predicted) return false;
+      if (t.is_paid !== undefined) return false;
+      return t.date <= todayStr;
+    });
+
+    const dismissedKey = `dismissed-recurring-${todayStr}`;
+    const dismissed = JSON.parse(localStorage.getItem(dismissedKey) || "[]");
+
+    return pending.filter((t) => !dismissed.includes(t.id)).length;
+  }, [transactions]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -31,28 +61,28 @@ export function Navigation() {
     <Navbar
       expand="lg"
       sticky="top"
-      className="mb-4"
+      className="mb-4 py-3"
       style={{
         background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
       }}
     >
-      <Container>
+      <Container fluid className="px-4">
         <Navbar.Brand
           as={Link}
           href="/"
-          className="d-flex align-items-center gap-2 text-white"
+          className="d-flex align-items-center gap-3 text-white"
         >
           <div
             className="d-flex align-items-center justify-content-center"
             style={{
-              width: "45px",
-              height: "45px",
+              width: "50px",
+              height: "50px",
               background: "rgba(255, 255, 255, 0.2)",
               borderRadius: "12px",
               backdropFilter: "blur(10px)",
             }}
           >
-            <FiTrendingUp size={24} />
+            <FiTrendingUp size={26} />
           </div>
           <span className="fs-4 fw-bold">Planilha Financeira</span>
         </Navbar.Brand>
@@ -61,7 +91,7 @@ export function Navigation() {
           className="border-0 text-white"
         />
         <Navbar.Collapse id="basic-navbar-nav">
-          <Nav className="ms-auto gap-2">
+          <Nav className="ms-auto gap-2 align-items-lg-center">
             <Nav.Link
               as={Link}
               href="/"
@@ -89,6 +119,21 @@ export function Navigation() {
               }}
             >
               <FiList size={18} /> Transações
+            </Nav.Link>
+            <Nav.Link
+              as={Link}
+              href="/recorrentes"
+              active={pathname === "/recorrentes"}
+              className={`d-flex align-items-center gap-2 px-3 py-2 rounded-3 fw-semibold ${
+                pathname === "/recorrentes"
+                  ? "bg-white text-primary"
+                  : "text-white"
+              }`}
+              style={{
+                transition: "all 0.3s ease",
+              }}
+            >
+              <FiRepeat size={18} /> Recorrentes
             </Nav.Link>
             <Nav.Link
               as={Link}
@@ -124,6 +169,35 @@ export function Navigation() {
                 </>
               )}
             </Nav.Link>
+
+            {pendingCount > 0 && (
+              <div className="position-relative">
+                <Button
+                  variant="light"
+                  className="rounded-circle p-2 d-flex align-items-center justify-content-center"
+                  style={{
+                    background: "rgba(255, 255, 255, 0.2)",
+                    border: "none",
+                    color: "white",
+                    width: "40px",
+                    height: "40px",
+                  }}
+                  onClick={() => {
+                    const event = new CustomEvent("openRecurringNotifications");
+                    window.dispatchEvent(event);
+                  }}
+                >
+                  <FiBell size={18} />
+                </Button>
+                <Badge
+                  bg="danger"
+                  className="position-absolute top-0 start-100 translate-middle rounded-circle"
+                  style={{ fontSize: "0.65rem", padding: "0.3rem 0.45rem" }}
+                >
+                  {pendingCount}
+                </Badge>
+              </div>
+            )}
 
             <Dropdown align="end">
               <Dropdown.Toggle

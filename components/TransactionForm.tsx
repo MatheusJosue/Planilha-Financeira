@@ -62,7 +62,9 @@ export function TransactionForm({
       return;
     }
 
-    if (transaction) {
+    const isEditing = transaction && transaction.id;
+
+    if (isEditing) {
       updateTransaction(transaction.id, {
         description: formData.description,
         type: formData.type,
@@ -87,7 +89,9 @@ export function TransactionForm({
     <Modal show={show} onHide={onHide} centered>
       <Modal.Header closeButton>
         <Modal.Title>
-          {transaction ? "Editar Transação" : "Nova Transação"}
+          {transaction && transaction.id
+            ? "Editar Transação"
+            : "Nova Transação"}
         </Modal.Title>
       </Modal.Header>
       <Form onSubmit={handleSubmit}>

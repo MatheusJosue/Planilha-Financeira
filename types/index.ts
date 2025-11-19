@@ -1,5 +1,10 @@
 export type TransactionType = "income" | "expense";
 
+export type RecurrenceType = 
+  | "fixed"
+  | "installment"
+  | "variable";
+
 export interface Transaction {
   id: string;
   description: string;
@@ -7,6 +12,26 @@ export interface Transaction {
   category: string;
   value: number;
   date: string;
+  recurring_id?: string;
+  is_predicted?: boolean;
+  is_paid?: boolean;
+}
+
+export interface RecurringTransaction {
+  id: string;
+  description: string;
+  type: TransactionType;
+  category: string;
+  value: number;
+  recurrence_type: RecurrenceType;
+  start_date: string;
+  end_date?: string;
+  total_installments?: number;
+  current_installment?: number;
+  day_of_month: number;
+  is_active: boolean;
+  user_id: string;
+  created_at: string;
 }
 
 export interface FinanceData {

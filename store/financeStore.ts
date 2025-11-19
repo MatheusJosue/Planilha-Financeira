@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Transaction, FinanceData, DEFAULT_CATEGORIES } from "@/types";
+import { Transaction, FinanceData, DEFAULT_CATEGORIES, RecurringTransaction } from "@/types";
 import { createClient } from "@/lib/supabase-client";
 import { showError, showSuccess } from "@/lib/sweetalert";
 
@@ -11,6 +11,7 @@ interface FinanceStore extends FinanceData {
   isLoaded: boolean;
   currentMonth: string;
   monthsData: Record<string, MonthData>;
+  recurringTransactions: RecurringTransaction[];
   setCurrentMonth: (month: string) => void;
   createNewMonth: (month: string, copyFromPrevious?: boolean) => Promise<void>;
   getAvailableMonths: () => string[];
@@ -18,10 +19,18 @@ interface FinanceStore extends FinanceData {
   addTransaction: (transaction: Omit<Transaction, "id">) => Promise<void>;
   updateTransaction: (id: string, transaction: Partial<Transaction>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
-  addCategory: (category: string) => Promise<void>;
+  convertPredictedToReal: (predictedTransaction: Transaction, edits?: Partial<Transaction>) => Promise<void>;
+  setTransactions: (transactions: Transaction[]) => void;
+  updatePaymentStatus: (id: string, is_paid: boolean) => void;
+  addCategory: (name: string) => Promise<void>;
   deleteCategory: (category: string) => Promise<void>;
   importData: (data: FinanceData) => Promise<void>;
   clearAllData: () => Promise<void>;
+  addRecurringTransaction: (recurring: Omit<RecurringTransaction, "id" | "user_id" | "created_at">) => Promise<void>;
+  updateRecurringTransaction: (id: string, updates: Partial<RecurringTransaction>) => Promise<void>;
+  deleteRecurringTransaction: (id: string) => Promise<void>;
+  loadRecurringTransactions: () => Promise<void>;
+  generatePredictedTransactions: (monthsAhead?: number) => Transaction[];
 }
 
 const getCurrentMonth = () => {
@@ -35,6 +44,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
   isLoaded: false,
   currentMonth: getCurrentMonth(),
   monthsData: {},
+  recurringTransactions: [],
 
   setCurrentMonth: (month: string) => {
     const state = get();
@@ -141,45 +151,22 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
 
       console.log("Loading data for user:", user.id);
 
-      const { data: categoriesData } = await supabaseClient
+      const { data: userCategoriesData } = await supabaseClient
         .from('categories')
         .select('name')
         .eq('user_id', user.id)
         .order('name');
 
-      let categories: string[];
+      const userCustomCategories = userCategoriesData?.map(c => c.name) || [];
       
-      if (!categoriesData || categoriesData.length === 0) {
-        const { data: insertedCategories, error: insertError } = await supabaseClient
-          .from('categories')
-          .upsert(
-            DEFAULT_CATEGORIES.map(cat => ({ 
-              name: cat, 
-              user_id: user.id 
-            })),
-            { 
-              onConflict: 'name',
-              ignoreDuplicates: true 
-            }
-          )
-          .select('name');
-        
-        if (insertError) {
-          console.error("Error upserting categories:", insertError);
-        }
-        
-        categories = insertedCategories?.map(c => c.name) || [...DEFAULT_CATEGORIES];
-      } else {
-        categories = categoriesData.map(c => c.name);
-      }
+      const categoriesSet = new Set([...DEFAULT_CATEGORIES, ...userCustomCategories]);
+      const categories = Array.from(categoriesSet).sort();
 
       const { data: transactionsData, error } = await supabaseClient
         .from('transactions')
         .select('*')
         .eq('user_id', user.id)
         .order('date', { ascending: false });
-
-      console.log("Transactions loaded:", transactionsData?.length || 0);
 
       if (error) {
         console.error("Error loading from Supabase:", error);
@@ -197,8 +184,13 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       const monthsData: Record<string, MonthData> = {};
       const currentMonth = getCurrentMonth();
 
+      await get().loadRecurringTransactions();
+      
+      
+      const predictedTransactions = get().generatePredictedTransactions(12);
+      
       if (transactionsData && transactionsData.length > 0) {
-        transactionsData.forEach((t: { id: string; description: string; type: string; category: string; value: number; date: string }) => {
+        transactionsData.forEach((t: any) => {
           const month = t.date.substring(0, 7);
           if (!monthsData[month]) {
             monthsData[month] = { transactions: [] };
@@ -210,13 +202,35 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
             category: t.category,
             value: Number(t.value),
             date: t.date,
+            recurring_id: t.recurring_id,
+            is_predicted: false,
           });
         });
       }
 
+      predictedTransactions.forEach((t) => {
+        const month = t.date.substring(0, 7);
+        if (!monthsData[month]) {
+          monthsData[month] = { transactions: [] };
+        }
+        const hasRealTransaction = monthsData[month].transactions.some(
+          existing => existing.recurring_id === t.recurring_id && !existing.is_predicted
+        );
+        if (!hasRealTransaction) {
+          monthsData[month].transactions.push(t);
+        } else {
+        }
+      });
+
       if (!monthsData[currentMonth]) {
         monthsData[currentMonth] = { transactions: [] };
       }
+
+      console.log("Current month:", currentMonth);
+      console.log("Transactions for current month:", monthsData[currentMonth]?.transactions.length);
+      console.log("Predicted transactions in current month:", 
+        monthsData[currentMonth]?.transactions.filter(t => t.is_predicted).length
+      );
 
       set({
         monthsData,
@@ -340,9 +354,66 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     }));
   },
 
+  convertPredictedToReal: async (predictedTransaction, edits = {}) => {
+    const supabaseClient = createClient();
+    const { data: { user } } = await supabaseClient.auth.getUser();
+
+    if (!user) {
+      showError("Você precisa estar logado.");
+      return;
+    }
+
+    // Criar a transação real no banco
+    const month = (edits.date || predictedTransaction.date).substring(0, 7);
+    const { data, error } = await supabaseClient
+      .from('transactions')
+      .insert([{
+        description: edits.description || predictedTransaction.description,
+        type: edits.type || predictedTransaction.type,
+        category: edits.category || predictedTransaction.category,
+        value: edits.value !== undefined ? edits.value : predictedTransaction.value,
+        date: edits.date || predictedTransaction.date,
+        month: month,
+        user_id: user.id,
+        recurring_id: predictedTransaction.recurring_id,
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error converting predicted to real:", error);
+      showError("Erro ao criar transação. Verifique sua conexão.");
+      return;
+    }
+
+    if (data) {
+      showSuccess("Transação criada com sucesso!");
+      await get().loadFromSupabase();
+    }
+  },
+
+  setTransactions: (transactions) => {
+    set({ transactions });
+  },
+
+  updatePaymentStatus: (id: string, is_paid: boolean) => {
+    const state = get();
+    const updatedTransactions = state.transactions.map((t) =>
+      t.id === id ? { ...t, is_paid } : t
+    );
+    set({ transactions: updatedTransactions });
+  },
+
   addCategory: async (category) => {
     const state = get();
+    
     if (state.categories.includes(category)) {
+      showError("Esta categoria já existe.");
+      return;
+    }
+
+    if (DEFAULT_CATEGORIES.includes(category)) {
+      showError("Esta é uma categoria padrão do sistema.");
       return;
     }
 
@@ -362,7 +433,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       if (error.code === '23505') {
         console.log("Category already exists");
         set((state) => ({
-          categories: [...state.categories, category],
+          categories: [...state.categories, category].sort(),
         }));
         return;
       }
@@ -372,16 +443,31 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     }
 
     set((state) => ({
-      categories: [...state.categories, category],
+      categories: [...state.categories, category].sort(),
     }));
+    
+    showSuccess("Categoria adicionada com sucesso!");
   },
 
   deleteCategory: async (category) => {
+    if (DEFAULT_CATEGORIES.includes(category)) {
+      showError("Não é possível deletar categorias padrão do sistema.");
+      return;
+    }
+
     const supabaseClient = createClient();
+    const { data: { user } } = await supabaseClient.auth.getUser();
+
+    if (!user) {
+      showError("Você precisa estar logado.");
+      return;
+    }
+
     const { error } = await supabaseClient
       .from('categories')
       .delete()
-      .eq('name', category);
+      .eq('name', category)
+      .eq('user_id', user.id);
 
     if (error) {
       console.error("Error deleting category:", error);
@@ -392,6 +478,8 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     set((state) => ({
       categories: state.categories.filter((c) => c !== category),
     }));
+    
+    showSuccess("Categoria deletada com sucesso!");
   },
 
   importData: async (data) => {
@@ -490,4 +578,155 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
 
     await get().loadFromSupabase();
   },
+
+  addRecurringTransaction: async (recurring: Omit<RecurringTransaction, "id" | "user_id" | "created_at">) => {
+    const supabaseClient = createClient();
+    const { data: { user } } = await supabaseClient.auth.getUser();
+
+    if (!user) {
+      showError("Você precisa estar logado.");
+      return;
+    }
+
+    const { data, error } = await supabaseClient
+      .from('recurring_transactions')
+      .insert([{ ...recurring, user_id: user.id }])
+      .select()
+      .single();
+
+    if (error) {
+      showError("Erro ao criar transação recorrente");
+      console.error(error);
+      return;
+    }
+
+    set((state) => ({
+      recurringTransactions: [...state.recurringTransactions, data],
+    }));
+
+    showSuccess("Transação recorrente criada!");
+  },
+
+  updateRecurringTransaction: async (id: string, updates: Partial<RecurringTransaction>) => {
+    const supabaseClient = createClient();
+
+    const { error } = await supabaseClient
+      .from('recurring_transactions')
+      .update(updates)
+      .eq('id', id);
+
+    if (error) {
+      showError("Erro ao atualizar transação recorrente");
+      console.error(error);
+      return;
+    }
+
+    set((state) => ({
+      recurringTransactions: state.recurringTransactions.map((r) =>
+        r.id === id ? { ...r, ...updates } : r
+      ),
+    }));
+
+    showSuccess("Transação recorrente atualizada!");
+  },
+
+  deleteRecurringTransaction: async (id: string) => {
+    const supabaseClient = createClient();
+
+    const { error } = await supabaseClient
+      .from('recurring_transactions')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      showError("Erro ao deletar transação recorrente");
+      console.error(error);
+      return;
+    }
+
+    set((state) => ({
+      recurringTransactions: state.recurringTransactions.filter((r) => r.id !== id),
+    }));
+
+    showSuccess("Transação recorrente deletada!");
+  },
+
+  loadRecurringTransactions: async () => {
+    const supabaseClient = createClient();
+    const { data: { user } } = await supabaseClient.auth.getUser();
+
+    if (!user) {
+      console.log("No user found for loading recurring transactions");
+      return;
+    }
+
+    const { data, error } = await supabaseClient
+      .from('recurring_transactions')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('is_active', true);
+
+    if (error) {
+      console.error("Error loading recurring transactions:", error);
+      return;
+    }
+
+    console.log("Recurring transactions from DB:", data);
+    set({ recurringTransactions: data || [] });
+  },
+
+  generatePredictedTransactions: (monthsAhead: number = 12): Transaction[] => {
+    const state = get();
+    const predicted: Transaction[] = [];
+    const today = new Date();
+
+    console.log("Generating predictions for", state.recurringTransactions.length, "recurring transactions");
+
+    state.recurringTransactions.forEach((recurring) => {
+      if (!recurring.is_active) {
+        console.log("Skipping inactive recurring:", recurring.description);
+        return;
+      }
+
+      console.log("Processing recurring:", recurring.description, recurring.value);
+
+      const startDate = new Date(recurring.start_date);
+      
+      for (let i = -1; i <= monthsAhead; i++) {
+        const targetDate = new Date(today.getFullYear(), today.getMonth() + i, recurring.day_of_month);
+        
+        if (targetDate < startDate) continue;
+        if (recurring.end_date && targetDate > new Date(recurring.end_date)) continue;
+
+        if (recurring.recurrence_type === 'installment' && recurring.total_installments) {
+          const monthsSinceStart = Math.floor(
+            (targetDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
+          );
+          if (monthsSinceStart >= recurring.total_installments) continue;
+        }
+
+        const month = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`;
+        const dateStr = `${month}-${String(recurring.day_of_month).padStart(2, '0')}`;
+
+        const predictedTransaction = {
+          id: `predicted-${recurring.id}-${month}`,
+          description: recurring.recurrence_type === 'installment' 
+            ? `${recurring.description} (${Math.floor((targetDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30)) + 1}/${recurring.total_installments})`
+            : recurring.description,
+          type: recurring.type,
+          category: recurring.category,
+          value: recurring.value,
+          date: dateStr,
+          recurring_id: recurring.id,
+          is_predicted: true,
+        };
+        
+        console.log("Generated prediction for month", month, ":", predictedTransaction.value);
+        predicted.push(predictedTransaction);
+      }
+    });
+
+    return predicted;
+  },
 }));
+

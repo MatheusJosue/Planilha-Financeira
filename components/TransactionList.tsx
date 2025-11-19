@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Table, Button, Badge, Form, InputGroup } from "react-bootstrap";
-import { FiEdit, FiTrash2, FiSearch, FiMenu } from "react-icons/fi";
+import { FiEdit, FiTrash2, FiSearch, FiMenu, FiCopy } from "react-icons/fi";
 import { showConfirm } from "@/lib/sweetalert";
 import {
   DndContext,
@@ -28,15 +28,22 @@ import { formatDate } from "@/utils/formatDate";
 
 interface TransactionListProps {
   onEdit: (transaction: Transaction) => void;
+  onDuplicate?: (transaction: Transaction) => void;
 }
 
 interface SortableRowProps {
   transaction: Transaction;
   onEdit: (transaction: Transaction) => void;
   onDelete: (id: string, description: string) => void;
+  onDuplicate?: (transaction: Transaction) => void;
 }
 
-function SortableRow({ transaction, onEdit, onDelete }: SortableRowProps) {
+function SortableRow({
+  transaction,
+  onEdit,
+  onDelete,
+  onDuplicate,
+}: SortableRowProps) {
   const {
     attributes,
     listeners,
@@ -46,12 +53,15 @@ function SortableRow({ transaction, onEdit, onDelete }: SortableRowProps) {
     isDragging,
   } = useSortable({ id: transaction.id });
 
+  const isPredicted = transaction.is_predicted;
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.5 : isPredicted ? 0.7 : 1,
     cursor: isDragging ? "grabbing" : "grab",
     borderBottom: "1px solid #e2e8f0",
+    background: isPredicted ? "rgba(102, 126, 234, 0.05)" : "transparent",
   };
 
   return (
@@ -66,6 +76,30 @@ function SortableRow({ transaction, onEdit, onDelete }: SortableRowProps) {
           <span style={{ fontWeight: "500" }}>
             {formatDate(transaction.date)}
           </span>
+          {isPredicted && (
+            <Badge
+              bg="primary"
+              style={{ fontSize: "0.7rem", padding: "2px 6px" }}
+            >
+              Previsto
+            </Badge>
+          )}
+          {transaction.is_paid === true && (
+            <Badge
+              bg="success"
+              style={{ fontSize: "0.7rem", padding: "2px 6px" }}
+            >
+              ✓ Pago
+            </Badge>
+          )}
+          {transaction.is_paid === false && (
+            <Badge
+              bg="danger"
+              style={{ fontSize: "0.7rem", padding: "2px 6px" }}
+            >
+              ✗ Não Pago
+            </Badge>
+          )}
         </div>
       </td>
       <td style={{ padding: "1rem", fontWeight: "500" }}>
@@ -111,29 +145,43 @@ function SortableRow({ transaction, onEdit, onDelete }: SortableRowProps) {
         </span>
       </td>
       <td className="text-center" style={{ padding: "1rem" }}>
-        <Button
-          variant="outline-primary"
-          size="sm"
-          className="me-2"
-          onClick={() => onEdit(transaction)}
-          style={{ borderRadius: "8px", padding: "6px 12px" }}
-        >
-          <FiEdit />
-        </Button>
-        <Button
-          variant="outline-danger"
-          size="sm"
-          onClick={() => onDelete(transaction.id, transaction.description)}
-          style={{ borderRadius: "8px", padding: "6px 12px" }}
-        >
-          <FiTrash2 />
-        </Button>
+        {!isPredicted && (
+          <>
+            <Button
+              variant="outline-success"
+              size="sm"
+              className="me-2"
+              onClick={() => onDuplicate?.(transaction)}
+              style={{ borderRadius: "8px", padding: "6px 12px" }}
+              title="Duplicar para próximo mês"
+            >
+              <FiCopy />
+            </Button>
+            <Button
+              variant="outline-primary"
+              size="sm"
+              className="me-2"
+              onClick={() => onEdit(transaction)}
+              style={{ borderRadius: "8px", padding: "6px 12px" }}
+            >
+              <FiEdit />
+            </Button>
+            <Button
+              variant="outline-danger"
+              size="sm"
+              onClick={() => onDelete(transaction.id, transaction.description)}
+              style={{ borderRadius: "8px", padding: "6px 12px" }}
+            >
+              <FiTrash2 />
+            </Button>
+          </>
+        )}
       </td>
     </tr>
   );
 }
 
-export function TransactionList({ onEdit }: TransactionListProps) {
+export function TransactionList({ onEdit, onDuplicate }: TransactionListProps) {
   const { transactions, deleteTransaction, categories } = useFinanceStore();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<"all" | "income" | "expense">(
@@ -207,6 +255,28 @@ export function TransactionList({ onEdit }: TransactionListProps) {
 
   return (
     <div>
+      {sortedTransactions.some((t) => t.is_predicted) && (
+        <div
+          className="mb-4 p-3"
+          role="alert"
+          style={{
+            background: "rgba(13, 202, 240, 0.1)",
+            border: "1px solid rgba(13, 202, 240, 0.3)",
+            borderRadius: "12px",
+            color: "var(--foreground)",
+          }}
+        >
+          <div className="d-flex align-items-center gap-2">
+            <FiMenu size={20} />
+            <div>
+              <strong>Transações Previstas:</strong> As transações com badge
+              "Previsto" são geradas automaticamente com base nas suas
+              transações recorrentes e não podem ser editadas diretamente.
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mb-4 row g-3">
         <div className="col-md-4">
           <InputGroup style={{ borderRadius: "10px", overflow: "hidden" }}>
@@ -388,6 +458,7 @@ export function TransactionList({ onEdit }: TransactionListProps) {
                       transaction={transaction}
                       onEdit={onEdit}
                       onDelete={handleDelete}
+                      onDuplicate={onDuplicate}
                     />
                   ))}
                 </SortableContext>

@@ -461,3 +461,28 @@ input[type="number"]::-webkit-outer-spin-button {
 .skeleton-pulse {
   animation: pulse 1.5s ease-in-out infinite;
 }
+
+[data-theme="dark"] .swal2-popup {
+  background-color: var(--card-bg) !important;
+  color: var(--foreground) !important;
+}
+
+[data-theme="dark"] .swal2-title {
+  color: var(--foreground) !important;
+}
+
+[data-theme="dark"] .swal2-html-container {
+  color: var(--foreground) !important;
+}
+
+[data-theme="dark"] .swal2-close {
+  color: var(--foreground) !important;
+}
+
+[data-theme="dark"] .swal2-icon {
+  border-color: var(--foreground) !important;
+}
+
+[data-theme="dark"] .swal2-icon .swal2-icon-content {
+  color: var(--foreground) !important;
+}

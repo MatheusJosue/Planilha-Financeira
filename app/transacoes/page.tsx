@@ -12,15 +12,49 @@ export default function TransactionsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingTransaction, setEditingTransaction] =
     useState<Transaction | null>(null);
+  const [duplicatingTransaction, setDuplicatingTransaction] =
+    useState<Transaction | null>(null);
 
   const handleEdit = (transaction: Transaction) => {
     setEditingTransaction(transaction);
+    setDuplicatingTransaction(null);
+    setShowForm(true);
+  };
+
+  const handleDuplicate = (transaction: Transaction) => {
+    const [year, month, day] = transaction.date.split("-").map(Number);
+
+    let nextMonth = month + 1;
+    let nextYear = year;
+
+    if (nextMonth > 12) {
+      nextMonth = 1;
+      nextYear += 1;
+    }
+
+    const daysInNextMonth = new Date(nextYear, nextMonth, 0).getDate();
+    const validDay = Math.min(day, daysInNextMonth);
+
+    const nextMonthStr = `${nextYear}-${String(nextMonth).padStart(
+      2,
+      "0"
+    )}-${String(validDay).padStart(2, "0")}`;
+
+    const duplicated: Transaction = {
+      ...transaction,
+      date: nextMonthStr,
+      id: "",
+    };
+
+    setDuplicatingTransaction(duplicated);
+    setEditingTransaction(null);
     setShowForm(true);
   };
 
   const handleCloseForm = () => {
     setShowForm(false);
     setEditingTransaction(null);
+    setDuplicatingTransaction(null);
   };
 
   return (
@@ -49,12 +83,12 @@ export default function TransactionsPage() {
 
       <MonthSelector />
 
-      <TransactionList onEdit={handleEdit} />
+      <TransactionList onEdit={handleEdit} onDuplicate={handleDuplicate} />
 
       <TransactionForm
         show={showForm}
         onHide={handleCloseForm}
-        transaction={editingTransaction}
+        transaction={editingTransaction || duplicatingTransaction}
       />
     </div>
   );
