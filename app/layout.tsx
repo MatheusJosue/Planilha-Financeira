@@ -6,7 +6,6 @@ import "./globals.css";
 import { Navigation } from "@/components/Navigation";
 import { StoreInitializer } from "@/components/StoreInitializer";
 import { FloatingAddButton } from "@/components/FloatingAddButton";
-import PendingRecurringNotification from "@/components/PendingRecurringNotification";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { usePathname } from "next/navigation";
 
@@ -27,12 +26,11 @@ export default function RootLayout({
           <StoreInitializer />
           {!isAuthPage && <Navigation />}
           {!isAuthPage ? (
-            <main className="container py-4">{children}</main>
+            <main className="container-fluid py-4">{children}</main>
           ) : (
             children
           )}
           {!isAuthPage && <FloatingAddButton />}
-          {!isAuthPage && <PendingRecurringNotification />}
         </ThemeProvider>
       </body>
     </html>

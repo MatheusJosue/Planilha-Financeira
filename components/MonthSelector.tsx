@@ -81,7 +81,7 @@ export function MonthSelector() {
   return (
     <>
       <div
-        className="d-flex align-items-center justify-content-between mb-4 p-3"
+        className="d-flex align-items-center justify-content-between mb-3 p-3"
         style={{
           background:
             "linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)",
