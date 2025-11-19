@@ -503,11 +503,16 @@ export default function SettingsPage() {
                         className="d-flex justify-content-between align-items-center p-3"
                         style={{
                           borderRadius: "12px",
-                          border: "2px solid #e2e8f0",
-                          background: "#f8f9fa",
+                          border: "2px solid var(--border-color)",
+                          background: "var(--card-bg)",
                         }}
                       >
-                        <span className="fw-semibold">{cat}</span>
+                        <span
+                          className="fw-semibold"
+                          style={{ color: "var(--foreground)" }}
+                        >
+                          {cat}
+                        </span>
                         <Button
                           variant="outline-danger"
                           size="sm"
