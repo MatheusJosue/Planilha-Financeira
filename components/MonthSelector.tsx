@@ -50,6 +50,11 @@ export function MonthSelector() {
 
   const handleCreateMonth = () => {
     if (newMonthValue) {
+      if (availableMonths.includes(newMonthValue)) {
+        alert("Este mês já foi criado!");
+        return;
+      }
+
       createNewMonth(newMonthValue, copyPrevious);
       setShowModal(false);
       setNewMonthValue("");
@@ -156,13 +161,18 @@ export function MonthSelector() {
         </Button>
       </div>
 
-      <Modal show={showModal} onHide={() => setShowModal(false)} centered>
+      <Modal
+        show={showModal}
+        onHide={() => setShowModal(false)}
+        centered
+        data-bs-theme="dark"
+      >
         <Modal.Header
           closeButton
           style={{
-            background:
-              "linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)",
-            borderBottom: "2px solid rgba(102, 126, 234, 0.2)",
+            backgroundColor: "var(--card-bg)",
+            color: "var(--foreground)",
+            borderBottom: "1px solid var(--border-color)",
           }}
         >
           <Modal.Title className="d-flex align-items-center">
@@ -177,22 +187,57 @@ export function MonthSelector() {
             >
               <FiCalendar className="text-white" size={20} />
             </div>
-            <span>Criar Novo Mês</span>
+            <span style={{ color: "var(--foreground)" }}>Criar Novo Mês</span>
           </Modal.Title>
         </Modal.Header>
-        <Modal.Body className="p-4">
+        <Modal.Body
+          className="p-4"
+          style={{
+            backgroundColor: "var(--card-bg)",
+            color: "var(--foreground)",
+          }}
+        >
           <Form.Group className="mb-4">
-            <Form.Label className="fw-semibold">Selecione o Mês</Form.Label>
+            <Form.Label
+              className="fw-semibold"
+              style={{ color: "var(--foreground)" }}
+            >
+              Selecione o Mês
+            </Form.Label>
             <Form.Control
               type="month"
               value={newMonthValue}
               onChange={(e) => setNewMonthValue(e.target.value)}
               style={{
                 borderRadius: "10px",
-                border: "2px solid #e2e8f0",
+                border:
+                  newMonthValue && availableMonths.includes(newMonthValue)
+                    ? "2px solid #dc3545"
+                    : "2px solid var(--border-color)",
                 padding: "12px",
+                backgroundColor: "var(--input-bg)",
+                color: "var(--foreground)",
               }}
+              isInvalid={
+                !!(newMonthValue && availableMonths.includes(newMonthValue))
+              }
             />
+            {newMonthValue && availableMonths.includes(newMonthValue) && (
+              <Form.Text
+                className="d-block mt-2"
+                style={{ color: "#dc3545", fontWeight: "500" }}
+              >
+                ⚠️ Este mês já foi criado!
+              </Form.Text>
+            )}
+            {newMonthValue && !availableMonths.includes(newMonthValue) && (
+              <Form.Text
+                className="text-success d-block mt-2"
+                style={{ fontWeight: "500" }}
+              >
+                ✓ Mês disponível para criação
+              </Form.Text>
+            )}
           </Form.Group>
 
           <div
@@ -200,7 +245,7 @@ export function MonthSelector() {
             style={{
               background: "rgba(17, 153, 142, 0.1)",
               borderRadius: "10px",
-              border: "2px solid rgba(17, 153, 142, 0.2)",
+              border: "2px solid rgba(17, 153, 142, 0.3)",
             }}
           >
             <Form.Group className="mb-0">
@@ -210,23 +255,34 @@ export function MonthSelector() {
                 label={
                   <div className="d-flex align-items-center gap-2">
                     <FiCopy size={18} />
-                    <span className="fw-semibold">
+                    <span
+                      className="fw-semibold"
+                      style={{ color: "var(--foreground)" }}
+                    >
                       Copiar transações do mês anterior
                     </span>
                   </div>
                 }
                 checked={copyPrevious}
                 onChange={(e) => setCopyPrevious(e.target.checked)}
-                style={{ fontSize: "1rem" }}
+                style={{ fontSize: "1rem", color: "var(--foreground)" }}
               />
-              <Form.Text className="text-muted ms-4 d-block mt-2">
+              <Form.Text
+                className="ms-4 d-block mt-2"
+                style={{ color: "var(--text-muted)" }}
+              >
                 💡 As transações serão duplicadas com as datas atualizadas para
                 o novo mês. Útil para contas fixas mensais.
               </Form.Text>
             </Form.Group>
           </div>
         </Modal.Body>
-        <Modal.Footer style={{ borderTop: "2px solid #e2e8f0" }}>
+        <Modal.Footer
+          style={{
+            borderTop: "1px solid var(--border-color)",
+            backgroundColor: "var(--card-bg)",
+          }}
+        >
           <Button
             variant="light"
             onClick={() => setShowModal(false)}
@@ -243,7 +299,7 @@ export function MonthSelector() {
               fontWeight: "600",
             }}
             onClick={handleCreateMonth}
-            disabled={!newMonthValue}
+            disabled={!newMonthValue || availableMonths.includes(newMonthValue)}
           >
             <FiPlus className="me-2" size={18} />
             Criar Mês

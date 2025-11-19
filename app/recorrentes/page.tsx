@@ -86,7 +86,7 @@ export default function RecorrentesPage() {
     <Container fluid className="py-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <h2 className="mb-1">
+          <h2 className="mb-1 d-flex align-items-center">
             <FiRepeat className="me-2" />
             Transações Recorrentes
           </h2>
