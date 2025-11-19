@@ -50,7 +50,6 @@ export default function RecurringTransactionForm({
 
   const [formData, setFormData] = useState(getInitialFormData());
 
-  // Atualizar o formulário quando a transação mudar
   useEffect(() => {
     setFormData(getInitialFormData());
   }, [transaction, show]);

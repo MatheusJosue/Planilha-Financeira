@@ -363,7 +363,6 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       return;
     }
 
-    // Criar a transação real no banco
     const month = (edits.date || predictedTransaction.date).substring(0, 7);
     const { data, error } = await supabaseClient
       .from('transactions')
