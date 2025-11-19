@@ -16,6 +16,8 @@ export default function SettingsPage() {
   const {
     transactions,
     categories,
+    recurringTransactions,
+    monthsData,
     addCategory,
     deleteCategory,
     importData,
@@ -25,22 +27,84 @@ export default function SettingsPage() {
   const [newCategory, setNewCategory] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleExport = () => {
-    const dataStr = JSON.stringify({ transactions, categories }, null, 2);
-    const dataBlob = new Blob([dataStr], { type: "application/json" });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `financeiro-backup-${
-      new Date().toISOString().split("T")[0]
-    }.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+  const handleExport = async () => {
+    try {
+      const supabaseClient = (
+        await import("@/lib/supabase-client")
+      ).createClient();
+      const {
+        data: { user },
+      } = await supabaseClient.auth.getUser();
+
+      if (!user) {
+        showError("Você precisa estar logado para exportar dados.");
+        return;
+      }
+
+      const { data: allTransactionsData } = await supabaseClient
+        .from("transactions")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("date", { ascending: false });
+
+      const { data: recurringData } = await supabaseClient
+        .from("recurring_transactions")
+        .select("*")
+        .eq("user_id", user.id);
+
+      const customCategories = categories.filter(
+        (cat) => !DEFAULT_CATEGORIES.includes(cat)
+      );
+
+      const realTransactions = (allTransactionsData || []).map((t) => ({
+        description: t.description,
+        type: t.type,
+        category: t.category,
+        value: t.value,
+        date: t.date,
+      }));
+
+      const recurringTransactionsClean = (recurringData || []).map((rt) => ({
+        description: rt.description,
+        type: rt.type,
+        category: rt.category,
+        value: rt.value,
+        day_of_month: rt.day_of_month,
+        recurrence_type: rt.recurrence_type,
+        start_date: rt.start_date,
+        end_date: rt.end_date,
+        total_installments: rt.total_installments,
+        current_installment: rt.current_installment,
+        is_active: rt.is_active,
+      }));
+
+      const exportData = {
+        recurringTransactions: recurringTransactionsClean,
+        realTransactions,
+        categories: customCategories,
+      };
+
+      const dataStr = JSON.stringify(exportData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: "application/json" });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `financeiro-backup-${
+        new Date().toISOString().split("T")[0]
+      }.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      showSuccess("Dados exportados com sucesso!");
+    } catch (error) {
+      console.error("Export error:", error);
+      showError("Erro ao exportar dados.");
+    }
   };
 
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -48,18 +112,33 @@ export default function SettingsPage() {
     reader.onload = async (event) => {
       try {
         const data = JSON.parse(event.target?.result as string);
-        if (data.transactions && data.categories) {
-          const result = await showConfirm(
-            "Isso substituirá todos os dados atuais. Deseja continuar?",
-            "Importar dados?"
-          );
-          if (result.isConfirmed) {
+
+        const isNewFormat =
+          data.recurringTransactions !== undefined &&
+          data.realTransactions !== undefined;
+
+        const isOldFormat =
+          data.transactions !== undefined && data.categories !== undefined;
+
+        if (!isNewFormat && !isOldFormat) {
+          showError("Arquivo inválido! Formato não reconhecido.");
+          return;
+        }
+
+        const result = await showConfirm(
+          "Isso substituirá todos os dados atuais. Deseja continuar?",
+          "Importar dados?"
+        );
+
+        if (result.isConfirmed) {
+          if (isNewFormat) {
+            await handleImportNewFormat(data);
+          } else {
             await importData(data);
           }
-        } else {
-          showError("Arquivo inválido!");
         }
-      } catch {
+      } catch (error) {
+        console.error("Import error:", error);
         showError("Erro ao ler o arquivo!");
       }
     };
@@ -67,6 +146,97 @@ export default function SettingsPage() {
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
+    }
+  };
+
+  const handleImportNewFormat = async (data: any) => {
+    try {
+      const supabaseClient = (
+        await import("@/lib/supabase-client")
+      ).createClient();
+      const {
+        data: { user },
+      } = await supabaseClient.auth.getUser();
+
+      if (!user) {
+        showError("Você precisa estar logado para importar dados.");
+        return;
+      }
+
+      if (data.categories && data.categories.length > 0) {
+        for (const cat of data.categories) {
+          const { data: existing } = await supabaseClient
+            .from("categories")
+            .select("name")
+            .eq("user_id", user.id)
+            .eq("name", cat)
+            .single();
+
+          if (!existing) {
+            await supabaseClient
+              .from("categories")
+              .insert([{ name: cat, user_id: user.id }]);
+          }
+        }
+      }
+
+      if (data.recurringTransactions && data.recurringTransactions.length > 0) {
+        for (const rt of data.recurringTransactions) {
+          const { error } = await supabaseClient
+            .from("recurring_transactions")
+            .insert([
+              {
+                description: rt.description,
+                type: rt.type,
+                category: rt.category,
+                value: rt.value,
+                day_of_month: rt.day_of_month || 1,
+                recurrence_type: rt.recurrence_type || "fixed",
+                start_date:
+                  rt.start_date || new Date().toISOString().split("T")[0],
+                end_date: rt.end_date || null,
+                total_installments: rt.total_installments || null,
+                current_installment: rt.current_installment || null,
+                is_active: rt.is_active !== undefined ? rt.is_active : true,
+                user_id: user.id,
+              },
+            ]);
+
+          if (error) {
+            console.error("Error importing recurring transaction:", error);
+          }
+        }
+      }
+
+      if (data.realTransactions && data.realTransactions.length > 0) {
+        const transactionsToInsert = data.realTransactions.map((t: any) => ({
+          description: t.description,
+          type: t.type,
+          category: t.category,
+          value: t.value,
+          date: t.date,
+          month: t.date.substring(0, 7),
+          user_id: user.id,
+        }));
+
+        const { error } = await supabaseClient
+          .from("transactions")
+          .insert(transactionsToInsert);
+
+        if (error) {
+          console.error("Error importing transactions:", error);
+          showError(`Erro ao importar transações: ${error.message}`);
+          return;
+        }
+      }
+
+      await (await import("@/store/financeStore")).useFinanceStore
+        .getState()
+        .loadFromSupabase();
+      showSuccess("Dados importados com sucesso!");
+    } catch (error) {
+      console.error("Import error:", error);
+      showError("Erro ao importar dados. Verifique o console.");
     }
   };
 
@@ -333,11 +503,16 @@ export default function SettingsPage() {
                         className="d-flex justify-content-between align-items-center p-3"
                         style={{
                           borderRadius: "12px",
-                          border: "2px solid #e2e8f0",
-                          background: "#f8f9fa",
+                          border: "2px solid var(--border-color)",
+                          background: "var(--card-bg)",
                         }}
                       >
-                        <span className="fw-semibold">{cat}</span>
+                        <span
+                          className="fw-semibold"
+                          style={{ color: "var(--foreground)" }}
+                        >
+                          {cat}
+                        </span>
                         <Button
                           variant="outline-danger"
                           size="sm"

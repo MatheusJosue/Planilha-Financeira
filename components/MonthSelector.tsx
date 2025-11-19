@@ -488,7 +488,7 @@ export function MonthSelector() {
     <>
       {/* Barra de navegação de meses */}
       <nav
-        className="d-flex align-items-center justify-content-end mb-4 p-3 gap-3"
+        className="d-flex align-items-center justify-content-end mb-3 p-3 gap-3"
         aria-label="Navegação de meses"
       >
         <div className="d-flex align-items-center gap-2">

@@ -7,38 +7,25 @@ import { FiTrendingUp, FiCalendar } from "react-icons/fi";
 import { useMemo } from "react";
 
 export function FutureProjectionChart() {
-  const { recurringTransactions, transactions } = useFinanceStore();
+  const { transactions } = useFinanceStore();
 
   const projections = useMemo(() => {
     const today = new Date();
     const months = [];
 
-    // Calcular receitas e despesas fixas mensais
-    const activeRecurring = recurringTransactions.filter((rt) => rt.is_active);
+    const currentMonthTransactions = transactions;
 
-    const monthlyIncome = activeRecurring
-      .filter((rt) => rt.type === "income")
-      .reduce((sum, rt) => sum + rt.value, 0);
-
-    const monthlyExpenses = activeRecurring
-      .filter((rt) => rt.type === "expense")
-      .reduce((sum, rt) => sum + rt.value, 0);
-
-    const monthlyBalance = monthlyIncome - monthlyExpenses;
-
-    // Calcular saldo atual (mês corrente)
-    const currentMonthTransactions = transactions.filter(
-      (t) => !t.is_predicted
-    );
-    const currentIncome = currentMonthTransactions
+    const monthlyIncome = currentMonthTransactions
       .filter((t) => t.type === "income")
       .reduce((sum, t) => sum + t.value, 0);
-    const currentExpenses = currentMonthTransactions
+
+    const monthlyExpenses = currentMonthTransactions
       .filter((t) => t.type === "expense")
       .reduce((sum, t) => sum + t.value, 0);
-    const currentBalance = currentIncome - currentExpenses;
 
-    // Projetar próximos 3 meses
+    const monthlyBalance = monthlyIncome - monthlyExpenses;
+    const currentBalance = monthlyBalance;
+
     let accumulatedBalance = currentBalance;
 
     for (let i = 1; i <= 3; i++) {
@@ -68,7 +55,7 @@ export function FutureProjectionChart() {
       monthlyBalance,
       currentBalance,
     };
-  }, [recurringTransactions, transactions]);
+  }, [transactions]);
 
   return (
     <Card className="shadow-card h-100">
