@@ -52,6 +52,15 @@ export interface CategoryTotal {
   percentage: number;
 }
 
+export interface Category {
+  id?: string;
+  name: string;
+  user_id: string;
+  max_percentage: number | null;
+  max_value: number | null;
+  created_at?: string;
+}
+
 export const DEFAULT_CATEGORIES = [
   "Alimentação",
   "Transporte",

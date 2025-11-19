@@ -153,7 +153,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
 
       const { data: userCategoriesData } = await supabaseClient
         .from('categories')
-        .select('name')
+        .select('name, max_percentage, max_value')
         .eq('user_id', user.id)
         .order('name');
 
@@ -426,7 +426,12 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
 
     const { error } = await supabaseClient
       .from('categories')
-      .insert([{ name: category, user_id: user.id }]);
+      .insert([{ 
+        name: category, 
+        user_id: user.id,
+        max_percentage: null,
+        max_value: null
+      }]);
 
     if (error) {
       if (error.code === '23505') {
