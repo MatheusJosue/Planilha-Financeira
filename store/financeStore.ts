@@ -12,6 +12,8 @@ interface FinanceStore extends FinanceData {
   currentMonth: string;
   monthsData: Record<string, MonthData>;
   recurringTransactions: RecurringTransaction[];
+  categoryLimits: Record<string, { maxPercentage?: number; maxValue?: number }>;
+  hiddenDefaultCategories: string[];
   setCurrentMonth: (month: string) => void;
   createNewMonth: (month: string, copyFromPrevious?: boolean) => Promise<void>;
   getAvailableMonths: () => string[];
@@ -22,7 +24,7 @@ interface FinanceStore extends FinanceData {
   convertPredictedToReal: (predictedTransaction: Transaction, edits?: Partial<Transaction>) => Promise<void>;
   setTransactions: (transactions: Transaction[]) => void;
   updatePaymentStatus: (id: string, is_paid: boolean) => void;
-  addCategory: (name: string) => Promise<void>;
+  addCategory: (name: string, maxPercentage?: number, maxValue?: number) => Promise<void>;
   deleteCategory: (category: string) => Promise<void>;
   importData: (data: FinanceData) => Promise<void>;
   clearAllData: () => Promise<void>;
@@ -41,6 +43,8 @@ const getCurrentMonth = () => {
 export const useFinanceStore = create<FinanceStore>((set, get) => ({
   transactions: [],
   categories: [...DEFAULT_CATEGORIES],
+  categoryLimits: {},
+  hiddenDefaultCategories: [],
   isLoaded: false,
   currentMonth: getCurrentMonth(),
   monthsData: {},
@@ -153,13 +157,33 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
 
       const { data: userCategoriesData } = await supabaseClient
         .from('categories')
-        .select('name')
+        .select('name, max_percentage, max_value')
         .eq('user_id', user.id)
         .order('name');
 
+      const { data: hiddenCategoriesData } = await supabaseClient
+        .from('hidden_categories')
+        .select('category_name')
+        .eq('user_id', user.id);
+
+      const hiddenDefaultCategories = hiddenCategoriesData?.map(h => h.category_name) || [];
+
       const userCustomCategories = userCategoriesData?.map(c => c.name) || [];
-      
-      const categoriesSet = new Set([...DEFAULT_CATEGORIES, ...userCustomCategories]);
+      const categoryLimits: Record<string, { maxPercentage?: number; maxValue?: number }> = {};
+
+      userCategoriesData?.forEach(c => {
+        if (c.max_percentage !== null || c.max_value !== null) {
+          categoryLimits[c.name] = {
+            maxPercentage: c.max_percentage ?? undefined,
+            maxValue: c.max_value ?? undefined,
+          };
+        }
+      });
+
+      const visibleDefaultCategories = DEFAULT_CATEGORIES.filter(
+        cat => !hiddenDefaultCategories.includes(cat)
+      );
+      const categoriesSet = new Set([...visibleDefaultCategories, ...userCustomCategories]);
       const categories = Array.from(categoriesSet).sort();
 
       const { data: transactionsData, error } = await supabaseClient
@@ -237,6 +261,8 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
         currentMonth,
         transactions: monthsData[currentMonth]?.transactions || [],
         categories,
+        categoryLimits,
+        hiddenDefaultCategories,
         isLoaded: true,
       });
     } catch (error) {
@@ -404,9 +430,9 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     set({ transactions: updatedTransactions });
   },
 
-  addCategory: async (category) => {
+  addCategory: async (category, maxPercentage?, maxValue?) => {
     const state = get();
-    
+
     if (state.categories.includes(category)) {
       showError("Esta categoria já existe.");
       return;
@@ -427,13 +453,26 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
 
     const { error } = await supabaseClient
       .from('categories')
-      .insert([{ name: category, user_id: user.id }]);
+      .insert([{
+        name: category,
+        user_id: user.id,
+        max_percentage: maxPercentage ?? null,
+        max_value: maxValue ?? null
+      }]);
 
     if (error) {
       if (error.code === '23505') {
         console.log("Category already exists");
+        const newCategoryLimits = { ...state.categoryLimits };
+        if (maxPercentage !== undefined || maxValue !== undefined) {
+          newCategoryLimits[category] = {
+            maxPercentage,
+            maxValue,
+          };
+        }
         set((state) => ({
           categories: [...state.categories, category].sort(),
+          categoryLimits: newCategoryLimits,
         }));
         return;
       }
@@ -442,24 +481,52 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       return;
     }
 
+    const newCategoryLimits = { ...state.categoryLimits };
+    if (maxPercentage !== undefined || maxValue !== undefined) {
+      newCategoryLimits[category] = {
+        maxPercentage,
+        maxValue,
+      };
+    }
+
     set((state) => ({
       categories: [...state.categories, category].sort(),
+      categoryLimits: newCategoryLimits,
     }));
-    
+
     showSuccess("Categoria adicionada com sucesso!");
   },
 
   deleteCategory: async (category) => {
-    if (DEFAULT_CATEGORIES.includes(category)) {
-      showError("Não é possível deletar categorias padrão do sistema.");
-      return;
-    }
-
     const supabaseClient = createClient();
     const { data: { user } } = await supabaseClient.auth.getUser();
 
     if (!user) {
       showError("Você precisa estar logado.");
+      return;
+    }
+
+    if (DEFAULT_CATEGORIES.includes(category)) {
+      const { error } = await supabaseClient
+        .from('hidden_categories')
+        .insert([{ category_name: category, user_id: user.id }]);
+
+      if (error) {
+        if (error.code === '23505') {
+          console.log("Category already hidden");
+          return;
+        }
+        console.error("Error hiding category:", error);
+        showError("Erro ao ocultar categoria. Verifique sua conexão.");
+        return;
+      }
+
+      set((state) => ({
+        categories: state.categories.filter((c) => c !== category),
+        hiddenDefaultCategories: [...state.hiddenDefaultCategories, category],
+      }));
+
+      showSuccess("Categoria ocultada com sucesso!");
       return;
     }
 
@@ -475,10 +542,16 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       return;
     }
 
-    set((state) => ({
-      categories: state.categories.filter((c) => c !== category),
-    }));
-    
+    set((state) => {
+      const newCategoryLimits = { ...state.categoryLimits };
+      delete newCategoryLimits[category];
+
+      return {
+        categories: state.categories.filter((c) => c !== category),
+        categoryLimits: newCategoryLimits,
+      };
+    });
+
     showSuccess("Categoria deletada com sucesso!");
   },
 
