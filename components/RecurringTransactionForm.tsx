@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Modal, Form, Button, Row, Col, InputGroup } from "react-bootstrap";
 import { RecurringTransaction, RecurrenceType, TransactionType } from "@/types";
 import { useFinanceStore } from "@/store/financeStore";
+import { parseCurrency } from "@/utils/formatCurrency";
 
 interface RecurringTransactionFormProps {
   show: boolean;
@@ -52,6 +53,7 @@ export default function RecurringTransactionForm({
 
   useEffect(() => {
     setFormData(getInitialFormData());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transaction, show]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -61,7 +63,7 @@ export default function RecurringTransactionForm({
       description: formData.description,
       type: formData.type,
       category: formData.category,
-      value: parseFloat(formData.value),
+      value: parseCurrency(formData.value),
       recurrence_type: formData.recurrence_type,
       start_date: formData.start_date,
       day_of_month: parseInt(formData.day_of_month),
@@ -199,14 +201,12 @@ export default function RecurringTransactionForm({
                     R$
                   </InputGroup.Text>
                   <Form.Control
-                    type="number"
-                    step="0.01"
-                    min="0"
+                    type="text"
                     value={formData.value}
                     onChange={(e) =>
                       setFormData({ ...formData, value: e.target.value })
                     }
-                    placeholder="0,00"
+                    placeholder="Ex: 45,00 ou 45.00"
                     required
                     style={{
                       backgroundColor: "var(--input-bg)",

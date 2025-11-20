@@ -39,6 +39,7 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   min-height: 100vh;
   transition: background-color 0.3s ease, color 0.3s ease;
+  padding: 2vh;
 }
 
 [data-theme="light"] body {
@@ -104,6 +105,14 @@ body {
   transition: background-color 0.3s ease;
 }
 
+.dropdown-menu {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.dropdown-item {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
 .form-control,
 .form-select {
   background: var(--input-bg);
@@ -111,6 +120,7 @@ body {
   border-radius: 12px !important;
   border: 2px solid var(--border-color);
   transition: all 0.3s ease;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 [data-theme="dark"] .form-control,
@@ -283,6 +293,7 @@ body {
 
 [data-theme="dark"] .dropdown-item {
   color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 [data-theme="dark"] .dropdown-item:hover {
@@ -390,6 +401,34 @@ body {
   background-color: var(--input-bg) !important;
   color: var(--foreground) !important;
   border-color: var(--border-color) !important;
+}
+
+.input-group-text {
+  border-radius: 12px 0 0 12px !important;
+  border-right: none !important;
+  border-width: 2px !important;
+}
+
+.input-group > .form-control {
+  border-radius: 0 12px 12px 0 !important;
+  border-left: none !important;
+  border-width: 2px !important;
+}
+
+.input-group > .form-control:focus {
+  border-left: none !important;
+  box-shadow: none !important;
+}
+
+.input-group:focus-within .input-group-text {
+  border-color: #667eea !important;
+  border-width: 2px !important;
+}
+
+.input-group:focus-within > .form-control {
+  border-color: #667eea !important;
+  border-width: 2px !important;
+  box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25) !important;
 }
 
 .login-icon {

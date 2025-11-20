@@ -270,7 +270,7 @@ export function TransactionList({ onEdit, onDuplicate }: TransactionListProps) {
             <FiMenu size={20} />
             <div>
               <strong>Transações Previstas:</strong> As transações com badge
-              "Previsto" são geradas automaticamente com base nas suas
+              &quot;Previsto&quot; são geradas automaticamente com base nas suas
               transações recorrentes e não podem ser editadas diretamente.
             </div>
           </div>
