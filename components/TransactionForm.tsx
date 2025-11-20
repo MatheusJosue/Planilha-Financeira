@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Modal, Button, Form } from "react-bootstrap";
+import { Modal, Button, Form, InputGroup } from "react-bootstrap";
 import { Transaction, TransactionType } from "@/types";
 import { useFinanceStore } from "@/store/financeStore";
 import { getTodayISO } from "@/utils/formatDate";
 import { showWarning } from "@/lib/sweetalert";
+import { parseCurrency } from "@/utils/formatCurrency";
 
 interface TransactionFormProps {
   show: boolean;
@@ -39,7 +40,7 @@ export function TransactionForm({
     };
   };
 
-  const [formData, setFormData] = useState(getInitialFormData());
+  const [formData, setFormData] = useState(getInitialFormData);
 
   useEffect(() => {
     if (show) {
@@ -51,7 +52,7 @@ export function TransactionForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const value = parseFloat(formData.value);
+    const value = parseCurrency(formData.value);
     if (isNaN(value) || value <= 0) {
       showWarning("Por favor, insira um valor válido");
       return;
@@ -144,19 +145,35 @@ export function TransactionForm({
           </Form.Group>
 
           <Form.Group className="mb-3">
-            <Form.Label>Valor (R$)</Form.Label>
-            <Form.Control
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="0.00"
-              value={formData.value}
-              onChange={(e) =>
-                setFormData({ ...formData, value: e.target.value })
-              }
-              required
-            />
-          </Form.Group>
+                <Form.Label style={{ color: "var(--foreground)" }}>
+                  Valor
+                </Form.Label>
+                <InputGroup>
+                  <InputGroup.Text
+                    style={{
+                      backgroundColor: "var(--input-bg)",
+                      color: "var(--foreground)",
+                      borderColor: "var(--border-color)",
+                    }}
+                  >
+                    R$
+                  </InputGroup.Text>
+                  <Form.Control
+                    type="text"
+                    value={formData.value}
+                    onChange={(e) =>
+                      setFormData({ ...formData, date: e.target.value })
+                    }
+                    placeholder="Ex: 45,00 ou 45.00"
+                    required
+                    style={{
+                      backgroundColor: "var(--input-bg)",
+                      color: "var(--foreground)",
+                      borderColor: "var(--border-color)",
+                    }}
+                  />
+                </InputGroup>
+              </Form.Group>
 
           <Form.Group className="mb-3">
             <Form.Label>Data</Form.Label>

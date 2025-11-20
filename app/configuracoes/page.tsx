@@ -11,6 +11,7 @@ import {
   showWarning,
   showConfirm,
 } from "@/lib/sweetalert";
+import { parseCurrency } from "@/utils/formatCurrency";
 
 export default function SettingsPage() {
   const {
@@ -251,7 +252,7 @@ export default function SettingsPage() {
       }
 
       const percentage = maxPercentage ? parseFloat(maxPercentage) : undefined;
-      const value = maxValue ? parseFloat(maxValue) : undefined;
+      const value = maxValue ? parseCurrency(maxValue) : undefined;
 
       if (percentage !== undefined && (percentage <= 0 || percentage > 100)) {
         showWarning("A porcentagem deve estar entre 0 e 100!");
@@ -287,7 +288,9 @@ export default function SettingsPage() {
       ? `Deseja ocultar a categoria padrão "${category}"? Ela não aparecerá mais na sua lista.`
       : `Deseja realmente excluir a categoria "${category}"?`;
 
-    const title = isDefaultCategory ? "Ocultar categoria?" : "Excluir categoria?";
+    const title = isDefaultCategory
+      ? "Ocultar categoria?"
+      : "Excluir categoria?";
 
     const result = await showConfirm(message, title);
     if (result.isConfirmed) {
@@ -507,12 +510,10 @@ export default function SettingsPage() {
                     }}
                   />
                   <Form.Control
-                    type="number"
+                    type="text"
                     placeholder="Valor máximo (opcional)"
                     value={maxValue}
                     onChange={(e) => setMaxValue(e.target.value)}
-                    min="0"
-                    step="0.01"
                     style={{
                       borderRadius: "12px",
                       border: "2px solid #e2e8f0",
@@ -521,7 +522,8 @@ export default function SettingsPage() {
                   />
                 </div>
                 <small className="text-muted mt-2 d-block">
-                  💡 Defina limites opcionais: porcentagem máxima do orçamento ou valor máximo em reais
+                  💡 Defina limites opcionais: porcentagem máxima do orçamento
+                  ou valor máximo em reais
                 </small>
               </Form.Group>
 
@@ -593,19 +595,24 @@ export default function SettingsPage() {
                             >
                               {cat}
                             </span>
-                            {limits && (limits.maxPercentage !== undefined || limits.maxValue !== undefined) && (
-                              <small className="text-muted mt-1">
-                                {limits.maxPercentage !== undefined && (
-                                  <span>📊 Máx: {limits.maxPercentage}%</span>
-                                )}
-                                {limits.maxPercentage !== undefined && limits.maxValue !== undefined && (
-                                  <span> • </span>
-                                )}
-                                {limits.maxValue !== undefined && (
-                                  <span>💰 Máx: R$ {limits.maxValue.toFixed(2)}</span>
-                                )}
-                              </small>
-                            )}
+                            {limits &&
+                              (limits.maxPercentage !== undefined ||
+                                limits.maxValue !== undefined) && (
+                                <small className="text-muted mt-1">
+                                  {limits.maxPercentage !== undefined && (
+                                    <span>📊 Máx: {limits.maxPercentage}%</span>
+                                  )}
+                                  {limits.maxPercentage !== undefined &&
+                                    limits.maxValue !== undefined && (
+                                      <span> • </span>
+                                    )}
+                                  {limits.maxValue !== undefined && (
+                                    <span>
+                                      💰 Máx: R$ {limits.maxValue.toFixed(2)}
+                                    </span>
+                                  )}
+                                </small>
+                              )}
                           </div>
                           <Button
                             variant="outline-danger"
