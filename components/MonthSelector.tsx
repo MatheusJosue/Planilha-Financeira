@@ -374,13 +374,8 @@ const MonthStats = ({ totalMonths }: MonthStatsProps) => {
 };
 
 export function MonthSelector() {
-  const {
-    currentMonth,
-    setCurrentMonth,
-    createNewMonth,
-    getAvailableMonths,
-    monthsData,
-  } = useFinanceStore();
+  const { currentMonth, setCurrentMonth, createNewMonth, getAvailableMonths } =
+    useFinanceStore();
 
   const [showModal, setShowModal] = useState(false);
   const [newMonthValue, setNewMonthValue] = useState("");

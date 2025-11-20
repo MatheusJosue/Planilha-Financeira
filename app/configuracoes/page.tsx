@@ -16,6 +16,7 @@ export default function SettingsPage() {
   const {
     transactions,
     categories,
+    categoryLimits,
     recurringTransactions,
     monthsData,
     addCategory,
@@ -25,6 +26,8 @@ export default function SettingsPage() {
   } = useFinanceStore();
 
   const [newCategory, setNewCategory] = useState("");
+  const [maxPercentage, setMaxPercentage] = useState("");
+  const [maxValue, setMaxValue] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleExport = async () => {
@@ -246,12 +249,30 @@ export default function SettingsPage() {
         showWarning("Esta categoria já existe!");
         return;
       }
-      await addCategory(newCategory.trim());
+
+      const percentage = maxPercentage ? parseFloat(maxPercentage) : undefined;
+      const value = maxValue ? parseFloat(maxValue) : undefined;
+
+      if (percentage !== undefined && (percentage <= 0 || percentage > 100)) {
+        showWarning("A porcentagem deve estar entre 0 e 100!");
+        return;
+      }
+
+      if (value !== undefined && value <= 0) {
+        showWarning("O valor máximo deve ser maior que zero!");
+        return;
+      }
+
+      await addCategory(newCategory.trim(), percentage, value);
       setNewCategory("");
+      setMaxPercentage("");
+      setMaxValue("");
     }
   };
 
   const handleDeleteCategory = async (category: string) => {
+    const isDefaultCategory = DEFAULT_CATEGORIES.includes(category);
+
     const usedInTransactions = transactions.some(
       (t) => t.category === category
     );
@@ -262,10 +283,13 @@ export default function SettingsPage() {
       return;
     }
 
-    const result = await showConfirm(
-      `Deseja realmente excluir a categoria "${category}"?`,
-      "Excluir categoria?"
-    );
+    const message = isDefaultCategory
+      ? `Deseja ocultar a categoria padrão "${category}"? Ela não aparecerá mais na sua lista.`
+      : `Deseja realmente excluir a categoria "${category}"?`;
+
+    const title = isDefaultCategory ? "Ocultar categoria?" : "Excluir categoria?";
+
+    const result = await showConfirm(message, title);
     if (result.isConfirmed) {
       await deleteCategory(category);
     }
@@ -433,7 +457,7 @@ export default function SettingsPage() {
                 <Form.Label className="fw-semibold">
                   Adicionar Nova Categoria
                 </Form.Label>
-                <div className="d-flex gap-2">
+                <div className="d-flex gap-2 mb-2">
                   <Form.Control
                     type="text"
                     placeholder="Nome da categoria"
@@ -467,6 +491,38 @@ export default function SettingsPage() {
                     <FiPlus size={20} />
                   </Button>
                 </div>
+                <div className="d-flex gap-2">
+                  <Form.Control
+                    type="number"
+                    placeholder="% máxima (opcional)"
+                    value={maxPercentage}
+                    onChange={(e) => setMaxPercentage(e.target.value)}
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    style={{
+                      borderRadius: "12px",
+                      border: "2px solid #e2e8f0",
+                      padding: "12px",
+                    }}
+                  />
+                  <Form.Control
+                    type="number"
+                    placeholder="Valor máximo (opcional)"
+                    value={maxValue}
+                    onChange={(e) => setMaxValue(e.target.value)}
+                    min="0"
+                    step="0.01"
+                    style={{
+                      borderRadius: "12px",
+                      border: "2px solid #e2e8f0",
+                      padding: "12px",
+                    }}
+                  />
+                </div>
+                <small className="text-muted mt-2 d-block">
+                  💡 Defina limites opcionais: porcentagem máxima do orçamento ou valor máximo em reais
+                </small>
               </Form.Group>
 
               <div className="mb-4">
@@ -474,20 +530,41 @@ export default function SettingsPage() {
                   📋 Categorias Padrão:
                 </h6>
                 <div className="d-flex flex-wrap gap-2">
-                  {DEFAULT_CATEGORIES.map((cat) => (
-                    <Badge
-                      key={cat}
-                      bg="secondary"
-                      className="p-2"
-                      style={{
-                        borderRadius: "10px",
-                        fontSize: "0.9rem",
-                        fontWeight: "600",
-                      }}
-                    >
-                      {cat}
-                    </Badge>
-                  ))}
+                  {DEFAULT_CATEGORIES.map((cat) => {
+                    const isHidden = !categories.includes(cat);
+                    if (isHidden) return null;
+
+                    return (
+                      <div
+                        key={cat}
+                        className="d-flex align-items-center gap-2 p-2"
+                        style={{
+                          borderRadius: "10px",
+                          fontSize: "0.9rem",
+                          fontWeight: "600",
+                          background: "#6c757d",
+                          color: "white",
+                        }}
+                      >
+                        <span>{cat}</span>
+                        <button
+                          onClick={() => handleDeleteCategory(cat)}
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            color: "white",
+                            cursor: "pointer",
+                            padding: "0 4px",
+                            fontSize: "1rem",
+                            lineHeight: "1",
+                          }}
+                          title="Ocultar categoria"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -497,35 +574,53 @@ export default function SettingsPage() {
                     ✨ Categorias Customizadas:
                   </h6>
                   <div className="d-flex flex-column gap-2">
-                    {customCategories.map((cat) => (
-                      <div
-                        key={cat}
-                        className="d-flex justify-content-between align-items-center p-3"
-                        style={{
-                          borderRadius: "12px",
-                          border: "2px solid var(--border-color)",
-                          background: "var(--card-bg)",
-                        }}
-                      >
-                        <span
-                          className="fw-semibold"
-                          style={{ color: "var(--foreground)" }}
-                        >
-                          {cat}
-                        </span>
-                        <Button
-                          variant="outline-danger"
-                          size="sm"
-                          onClick={() => handleDeleteCategory(cat)}
+                    {customCategories.map((cat) => {
+                      const limits = categoryLimits[cat];
+                      return (
+                        <div
+                          key={cat}
+                          className="d-flex justify-content-between align-items-center p-3"
                           style={{
-                            borderRadius: "10px",
-                            padding: "6px 12px",
+                            borderRadius: "12px",
+                            border: "2px solid var(--border-color)",
+                            background: "var(--card-bg)",
                           }}
                         >
-                          <FiTrash2 size={16} />
-                        </Button>
-                      </div>
-                    ))}
+                          <div className="d-flex flex-column">
+                            <span
+                              className="fw-semibold"
+                              style={{ color: "var(--foreground)" }}
+                            >
+                              {cat}
+                            </span>
+                            {limits && (limits.maxPercentage !== undefined || limits.maxValue !== undefined) && (
+                              <small className="text-muted mt-1">
+                                {limits.maxPercentage !== undefined && (
+                                  <span>📊 Máx: {limits.maxPercentage}%</span>
+                                )}
+                                {limits.maxPercentage !== undefined && limits.maxValue !== undefined && (
+                                  <span> • </span>
+                                )}
+                                {limits.maxValue !== undefined && (
+                                  <span>💰 Máx: R$ {limits.maxValue.toFixed(2)}</span>
+                                )}
+                              </small>
+                            )}
+                          </div>
+                          <Button
+                            variant="outline-danger"
+                            size="sm"
+                            onClick={() => handleDeleteCategory(cat)}
+                            style={{
+                              borderRadius: "10px",
+                              padding: "6px 12px",
+                            }}
+                          >
+                            <FiTrash2 size={16} />
+                          </Button>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}

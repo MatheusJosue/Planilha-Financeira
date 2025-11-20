@@ -34,6 +34,18 @@ export interface RecurringTransaction {
   created_at: string;
 }
 
+export interface Category {
+  name: string;
+  maxPercentage?: number;
+  maxValue?: number;
+}
+
+export interface Category {
+  name: string;
+  maxPercentage?: number;
+  maxValue?: number;
+}
+
 export interface FinanceData {
   transactions: Transaction[];
   categories: string[];
