@@ -10,15 +10,12 @@ export function RecurringVsVariableChart() {
   const { transactions } = useFinanceStore();
 
   const stats = useMemo(() => {
-    // Separar transações do mês atual (despesas)
     const expenses = transactions.filter((t) => t.type === "expense");
 
-    // Transações fixas: que vieram de recorrentes (têm recurring_id) OU são previstas (is_predicted)
     const recurringExpenses = expenses.filter(
       (t) => t.recurring_id || t.is_predicted
     );
 
-    // Transações variáveis: sem recurring_id E não previstas
     const variableExpenses = expenses.filter(
       (t) => !t.recurring_id && !t.is_predicted
     );

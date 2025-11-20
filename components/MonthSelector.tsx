@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { Button, Modal, Form, Badge } from "react-bootstrap";
+import { Button, Modal, Form } from "react-bootstrap";
 import {
   FiCalendar,
   FiPlus,
@@ -11,13 +11,10 @@ import {
   FiAlertCircle,
   FiCheckCircle,
   FiInfo,
+  FiFileText,
 } from "react-icons/fi";
 import { useFinanceStore } from "@/store/financeStore";
 import { formatMonth, calculateNextMonth } from "@/utils/formatDate";
-
-// ============================================================================
-// TYPES & INTERFACES
-// ============================================================================
 
 interface BaseButtonOwnProps {
   backgroundColor: string;
@@ -33,13 +30,9 @@ interface BaseButtonProps extends BaseButtonOwnProps {
   ariaLabel?: string;
 }
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
 const COLORS = {
   primary: "#667eea",
-  secondary: "#1a202c", // botão de cancelar / secundário
+  secondary: "#1a202c",
   success: "#11998e",
 } as const;
 
@@ -48,14 +41,6 @@ const ANIMATION_CONFIG = {
   hoverTransform: "translateY(-2px)",
   hoverShadow: "0 4px 12px rgba(0, 0, 0, 0.18)",
 } as const;
-
-// ============================================================================
-// UTILS
-// ============================================================================
-
-// ============================================================================
-// BUTTONS BASE
-// ============================================================================
 
 interface BaseButtonVisualProps {
   backgroundColor: string;
@@ -101,7 +86,6 @@ const BaseButton = ({
 
   return (
     <Button
-      // NÃO usar variant visual
       variant="none"
       onClick={onClick}
       disabled={disabled}
@@ -126,7 +110,7 @@ const BaseButton = ({
             : "none",
         cursor: disabled ? "not-allowed" : "pointer",
         borderRadius: 999,
-        backgroundImage: "none", // garante que nenhum gradient do Bootstrap entre
+        backgroundImage: "none",
       }}
       onMouseEnter={() => !disabled && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -137,7 +121,6 @@ const BaseButton = ({
   );
 };
 
-// BOTÃO ROXO (CRIAR MÊS / NOVO MÊS)
 export const PrimaryButton = (
   props: Omit<BaseButtonProps, keyof BaseButtonVisualProps>
 ) => (
@@ -152,7 +135,6 @@ export const PrimaryButton = (
   />
 );
 
-// BOTÃO CANCELAR – TRANSPARENTE (GHOST)
 export const SecondaryButton = (
   props: Omit<BaseButtonProps, keyof BaseButtonVisualProps>
 ) => (
@@ -167,7 +149,6 @@ export const SecondaryButton = (
   />
 );
 
-// BOTÃO VERDE (SE VOCÊ QUISER USAR EM OUTRO LUGAR)
 export const SuccessButton = (
   props: Omit<BaseButtonProps, keyof BaseButtonVisualProps>
 ) => (
@@ -181,10 +162,6 @@ export const SuccessButton = (
     shadowOnHover
   />
 );
-
-// ============================================================================
-// SUB-COMPONENTES
-// ============================================================================
 
 interface NavigationButtonProps {
   direction: "prev" | "next";
@@ -396,10 +373,6 @@ const MonthStats = ({ totalMonths }: MonthStatsProps) => {
   );
 };
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
-
 export function MonthSelector() {
   const { currentMonth, setCurrentMonth, createNewMonth, getAvailableMonths } =
     useFinanceStore();
@@ -482,9 +455,38 @@ export function MonthSelector() {
     [isMonthDuplicate, newMonthValue, handleCreateMonth]
   );
 
+  const handleGeneratePDF = async () => {
+    const monthData = monthsData[currentMonth];
+    if (!monthData) {
+      alert("Nenhum dado disponível para este mês");
+      return;
+    }
+
+    try {
+      const { pdf } = await import("@react-pdf/renderer");
+      const { FinancialReportPDF } = await import("./FinancialReportPDF");
+
+      const blob = await pdf(
+        <FinancialReportPDF
+          monthLabel={formatMonth(currentMonth, "long")}
+          transactions={monthData.transactions}
+        />
+      ).toBlob();
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `relatorio-financeiro-${currentMonth}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Erro ao gerar PDF:", error);
+      alert("Erro ao gerar o relatório PDF. Tente novamente.");
+    }
+  };
+
   return (
     <>
-      {/* Barra de navegação de meses */}
       <nav
         className="d-flex align-items-center justify-content-end mb-3 p-3 gap-3"
         aria-label="Navegação de meses"
@@ -498,7 +500,7 @@ export function MonthSelector() {
 
           <MonthBadge
             currentMonth={currentMonth}
-            onClick={() => setShowMonthPicker(true)} // << NOVO
+            onClick={() => setShowMonthPicker(true)}
           />
 
           <NavigationButton
@@ -508,17 +510,43 @@ export function MonthSelector() {
           />
         </div>
 
-        {/* Botão Novo Mês com o MESMO background roxo do badge */}
-        <PrimaryButton
-          onClick={handleOpenModal}
-          icon={<FiPlus size={16} />}
-          ariaLabel="Criar novo mês"
-        >
-          Novo Mês
-        </PrimaryButton>
+        <div className="d-flex gap-2">
+          <Button
+            size="sm"
+            onClick={handleGeneratePDF}
+            className="d-flex align-items-center"
+            style={{
+              borderRadius: "10px",
+              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              border: "none",
+              padding: "8px 16px",
+              fontWeight: "600",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <FiFileText className="me-1" size={16} />
+            Gerar PDF
+          </Button>
+
+          <Button
+            size="sm"
+            onClick={() => setShowModal(true)}
+            className="d-flex align-items-center"
+            style={{
+              borderRadius: "10px",
+              background: "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)",
+              border: "none",
+              padding: "8px 16px",
+              fontWeight: "600",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <FiPlus className="me-1" size={16} />
+            Novo Mês
+          </Button>
+        </div>
       </nav>
 
-      {/* Modal */}
       <Modal
         show={showModal}
         onHide={handleCloseModal}
@@ -560,7 +588,6 @@ export function MonthSelector() {
             color: "var(--foreground)",
           }}
         >
-          {/* Label com o mesmo “peso visual” do botão */}
           <Form.Group className="mb-4">
             <Form.Label
               htmlFor="month-input"
@@ -621,7 +648,6 @@ export function MonthSelector() {
             gap: 12,
           }}
         >
-          {/* Botão cancelar reutilizável com cor #1a202c */}
           <SecondaryButton
             onClick={handleCloseModal}
             ariaLabel="Cancelar criação de mês"
@@ -629,7 +655,6 @@ export function MonthSelector() {
             Cancelar
           </SecondaryButton>
 
-          {/* Botão criar reutilizável estilo primário */}
           <PrimaryButton
             onClick={handleCreateMonth}
             disabled={!newMonthValue || !!isMonthDuplicate}
@@ -641,7 +666,6 @@ export function MonthSelector() {
         </Modal.Footer>
       </Modal>
 
-      {/* Modal Seletor de Meses */}
       <Modal
         show={showMonthPicker}
         onHide={() => setShowMonthPicker(false)}

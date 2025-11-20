@@ -25,7 +25,6 @@ export default function ResetPasswordPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    // Verifica se há uma sessão válida
     supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
         setMessage("Digite sua nova senha abaixo");

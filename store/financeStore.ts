@@ -389,7 +389,6 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       return;
     }
 
-    // Criar a transação real no banco
     const month = (edits.date || predictedTransaction.date).substring(0, 7);
     const { data, error } = await supabaseClient
       .from('transactions')
@@ -453,7 +452,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
 
     const { error } = await supabaseClient
       .from('categories')
-      .insert([{
+            .insert([{
         name: category,
         user_id: user.id,
         max_percentage: maxPercentage ?? null,
