@@ -39,7 +39,6 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   min-height: 100vh;
   transition: background-color 0.3s ease, color 0.3s ease;
-  padding: 2vh;
 }
 
 [data-theme="light"] body {
@@ -50,6 +49,9 @@ body {
   background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
 }
 
+main.container-fluid.py-4 {  
+  padding: 8vh;  
+}
 .card {
   background: var(--card-bg);
   border-radius: 20px !important;
