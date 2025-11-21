@@ -383,10 +383,10 @@ export function MonthSelector() {
 
   const [showMonthPicker, setShowMonthPicker] = useState(false);
 
-  const availableMonths = useMemo(
-    () => getAvailableMonths(),
-    [getAvailableMonths]
-  );
+const availableMonths = useMemo(
+  () => getAvailableMonths(),
+  [getAvailableMonths, monthsData]
+);
 
   const isMonthDuplicate = useMemo(
     () => !!newMonthValue && availableMonths.includes(newMonthValue),
@@ -528,22 +528,13 @@ export function MonthSelector() {
             Gerar PDF
           </Button>
 
-          <Button
-            size="sm"
-            onClick={() => setShowModal(true)}
-            className="d-flex align-items-center"
-            style={{
-              borderRadius: "10px",
-              background: "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)",
-              border: "none",
-              padding: "8px 16px",
-              fontWeight: "600",
-              whiteSpace: "nowrap",
-            }}
+          <PrimaryButton
+            onClick={handleOpenModal}
+            icon={<FiPlus size={16} />}
+            ariaLabel="Criar novo mês"
           >
-            <FiPlus className="me-1" size={16} />
             Novo Mês
-          </Button>
+          </PrimaryButton>
         </div>
       </nav>
 

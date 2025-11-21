@@ -1,12 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Modal, Button, Form, InputGroup } from "react-bootstrap";
+import { useState, useEffect, useCallback } from "react";
+import { Modal, Button, Form } from "react-bootstrap";
 import { Transaction, TransactionType } from "@/types";
 import { useFinanceStore } from "@/store/financeStore";
 import { getTodayISO } from "@/utils/formatDate";
 import { showWarning } from "@/lib/sweetalert";
 import { parseCurrency } from "@/utils/formatCurrency";
+import { SelectField } from "@/components/ui/SelectField";
+import { InputField } from "@/components/ui/InputField";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
+import { DateInput } from "@/components/ui/DateInput";
 
 interface TransactionFormProps {
   show: boolean;
@@ -21,7 +25,7 @@ export function TransactionForm({
 }: TransactionFormProps) {
   const { categories, addTransaction, updateTransaction } = useFinanceStore();
 
-  const getInitialFormData = () => {
+  const getInitialFormData = useCallback(() => {
     if (transaction) {
       return {
         description: transaction.description,
@@ -38,7 +42,7 @@ export function TransactionForm({
       value: "",
       date: getTodayISO(),
     };
-  };
+  }, [transaction, categories]);
 
   const [formData, setFormData] = useState(getInitialFormData);
 
@@ -97,95 +101,56 @@ export function TransactionForm({
       </Modal.Header>
       <Form onSubmit={handleSubmit}>
         <Modal.Body>
-          <Form.Group className="mb-3">
-            <Form.Label>Tipo</Form.Label>
-            <Form.Select
-              value={formData.type}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  type: e.target.value as TransactionType,
-                })
-              }
-              required
-            >
-              <option value="expense">Despesa</option>
-              <option value="income">Receita</option>
-            </Form.Select>
-          </Form.Group>
+          <SelectField
+            label="Tipo"
+            value={formData.type}
+            onChange={(value) =>
+              setFormData({ ...formData, type: value as TransactionType })
+            }
+            options={[
+              { value: "expense", label: "Despesa" },
+              { value: "income", label: "Receita" },
+            ]}
+            required
+          />
 
-          <Form.Group className="mb-3">
-            <Form.Label>Descrição</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="Ex: Supermercado, Salário..."
-              value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
-              required
-            />
-          </Form.Group>
+          <InputField
+            label="Descrição"
+            value={formData.description}
+            onChange={(value) =>
+              setFormData({ ...formData, description: value })
+            }
+            placeholder="Ex: Supermercado, Salário..."
+            required
+          />
 
-          <Form.Group className="mb-3">
-            <Form.Label>Categoria</Form.Label>
-            <Form.Select
-              value={formData.category}
-              onChange={(e) =>
-                setFormData({ ...formData, category: e.target.value })
-              }
-              required
-            >
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </Form.Select>
-          </Form.Group>
+          <SelectField
+            label="Categoria"
+            value={formData.category}
+            onChange={(value) => setFormData({ ...formData, category: value })}
+            options={categories.map((cat) => ({ value: cat, label: cat }))}
+            required
+          />
 
-          <Form.Group className="mb-3">
-                <Form.Label style={{ color: "var(--foreground)" }}>
-                  Valor
-                </Form.Label>
-                <InputGroup>
-                  <InputGroup.Text
-                    style={{
-                      backgroundColor: "var(--input-bg)",
-                      color: "var(--foreground)",
-                      borderColor: "var(--border-color)",
-                    }}
-                  >
-                    R$
-                  </InputGroup.Text>
-                  <Form.Control
-                    type="text"
-                    value={formData.value}
-                    onChange={(e) =>
-                      setFormData({ ...formData, date: e.target.value })
-                    }
-                    placeholder="Ex: 45,00 ou 45.00"
-                    required
-                    style={{
-                      backgroundColor: "var(--input-bg)",
-                      color: "var(--foreground)",
-                      borderColor: "var(--border-color)",
-                    }}
-                  />
-                </InputGroup>
-              </Form.Group>
+          <CurrencyInput
+            label="Valor"
+            value={formData.value}
+            onChange={(value) => setFormData({ ...formData, value })}
+            labelStyle={{ color: "var(--foreground)" }}
+            style={{
+              backgroundColor: "var(--input-bg)",
+              color: "var(--foreground)",
+              borderColor: "var(--border-color)",
+            }}
+            required
+          />
 
-          <Form.Group className="mb-3">
-            <Form.Label>Data</Form.Label>
-            <Form.Control
-              type="date"
-              value={formData.date}
-              onChange={(e) =>
-                setFormData({ ...formData, date: e.target.value })
-              }
-              required
-            />
-          </Form.Group>
+          <DateInput
+            label="Data"
+            value={formData.date}
+            onChange={(value) => setFormData({ ...formData, date: value })}
+            required
+          />
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={onHide}>
