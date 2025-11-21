@@ -165,66 +165,170 @@ export default function RecorrentesPage() {
               </Button>
             </div>
           ) : (
-            <div className="table-responsive">
-              <Table hover className="mb-0">
-                <thead>
+            <div
+              className="shadow-card"
+              style={{
+                borderRadius: "16px",
+                overflow: "hidden",
+              }}
+            >
+              <Table hover responsive className="align-middle mb-0">
+                <thead
+                  style={{
+                    background:
+                      "linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)",
+                    borderBottom: "2px solid #e2e8f0",
+                  }}
+                >
                   <tr>
-                    <th>Descrição</th>
-                    <th>Tipo</th>
-                    <th>Categoria</th>
-                    <th>Valor</th>
-                    <th>Recorrência</th>
-                    <th>Dia Vencimento</th>
-                    <th>Início</th>
-                    <th className="text-end">Ações</th>
+                    <th
+                      style={{
+                        padding: "1rem",
+                        fontWeight: "600",
+                        fontSize: "0.9rem",
+                      }}
+                    >
+                      Descrição
+                    </th>
+                    <th
+                      style={{
+                        padding: "1rem",
+                        fontWeight: "600",
+                        fontSize: "0.9rem",
+                      }}
+                    >
+                      Tipo
+                    </th>
+                    <th
+                      style={{
+                        padding: "1rem",
+                        fontWeight: "600",
+                        fontSize: "0.9rem",
+                      }}
+                    >
+                      Categoria
+                    </th>
+                    <th
+                      style={{
+                        padding: "1rem",
+                        fontWeight: "600",
+                        fontSize: "0.9rem",
+                      }}
+                    >
+                      Valor
+                    </th>
+                    <th
+                      style={{
+                        padding: "1rem",
+                        fontWeight: "600",
+                        fontSize: "0.9rem",
+                      }}
+                    >
+                      Recorrência
+                    </th>
+                    <th
+                      style={{
+                        padding: "1rem",
+                        fontWeight: "600",
+                        fontSize: "0.9rem",
+                      }}
+                    >
+                      Dia Vencimento
+                    </th>
+                    <th
+                      style={{
+                        padding: "1rem",
+                        fontWeight: "600",
+                        fontSize: "0.9rem",
+                      }}
+                    >
+                      Início
+                    </th>
+                    <th
+                      className="text-end"
+                      style={{
+                        padding: "1rem",
+                        fontWeight: "600",
+                        fontSize: "0.9rem",
+                      }}
+                    >
+                      Ações
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {activeTransactions.map((transaction) => (
                     <tr key={transaction.id}>
-                      <td>
+                      <td style={{ padding: "1rem", fontWeight: "500" }}>
                         <strong>{transaction.description}</strong>
                       </td>
-                      <td>
+                      <td style={{ padding: "1rem" }}>
                         <Badge
-                          bg={
-                            transaction.type === "income" ? "success" : "danger"
-                          }
+                          bg={transaction.type === "income" ? "success" : "danger"}
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: "8px",
+                            fontWeight: "500",
+                            fontSize: "0.85rem",
+                          }}
                         >
-                          {transaction.type === "income"
-                            ? "Receita"
-                            : "Despesa"}
+                          {transaction.type === "income" ? "Receita" : "Despesa"}
                         </Badge>
                       </td>
-                      <td>{transaction.category}</td>
-                      <td>
-                        <strong
+                      <td style={{ padding: "1rem" }}>
+                        <Badge
+                          bg="secondary"
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: "8px",
+                            fontWeight: "500",
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          {transaction.category}
+                        </Badge>
+                      </td>
+                      <td className="text-end" style={{ padding: "1rem" }}>
+                        <span
                           className={
                             transaction.type === "income"
-                              ? "text-success"
-                              : "text-danger"
+                              ? "text-success fw-bold"
+                              : "text-danger fw-bold"
                           }
+                          style={{ fontSize: "1rem" }}
                         >
+                          {transaction.type === "income" ? "+" : "-"}
                           {formatCurrency(transaction.value)}
-                        </strong>
+                        </span>
                       </td>
-                      <td>
-                        <Badge bg="primary">
+                      <td style={{ padding: "1rem" }}>
+                        <Badge
+                          bg="primary"
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: "8px",
+                            fontWeight: "500",
+                            fontSize: "0.85rem",
+                          }}
+                        >
                           {getRecurrenceLabel(transaction)}
                         </Badge>
                       </td>
-                      <td>Dia {transaction.day_of_month}</td>
-                      <td>
+                      <td style={{ padding: "1rem" }}>
+                        Dia {transaction.day_of_month}
+                      </td>
+                      <td style={{ padding: "1rem" }}>
                         {new Date(transaction.start_date).toLocaleDateString(
                           "pt-BR"
                         )}
                       </td>
-                      <td className="text-end">
+                      <td className="text-end" style={{ padding: "1rem" }}>
                         <Button
                           variant="outline-primary"
                           size="sm"
                           className="me-2"
                           onClick={() => handleEdit(transaction)}
+                          style={{ borderRadius: "8px", padding: "6px 12px" }}
                         >
                           <FiEdit2 />
                         </Button>
@@ -232,6 +336,7 @@ export default function RecorrentesPage() {
                           variant="outline-danger"
                           size="sm"
                           onClick={() => handleDelete(transaction.id)}
+                          style={{ borderRadius: "8px", padding: "6px 12px" }}
                         >
                           <FiTrash2 />
                         </Button>
@@ -251,46 +356,144 @@ export default function RecorrentesPage() {
             <h5 className="mb-0">Transações Inativas</h5>
           </Card.Header>
           <Card.Body className="p-0">
-            <div className="table-responsive">
-              <Table hover className="mb-0">
-                <thead>
+            <div
+              className="shadow-card"
+              style={{
+                borderRadius: "16px",
+                overflow: "hidden",
+              }}
+            >
+              <Table hover responsive className="align-middle mb-0">
+                <thead
+                  style={{
+                    background:
+                      "linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)",
+                    borderBottom: "2px solid #e2e8f0",
+                  }}
+                >
                   <tr>
-                    <th>Descrição</th>
-                    <th>Tipo</th>
-                    <th>Categoria</th>
-                    <th>Valor</th>
-                    <th>Recorrência</th>
-                    <th className="text-end">Ações</th>
+                    <th
+                      style={{
+                        padding: "1rem",
+                        fontWeight: "600",
+                        fontSize: "0.9rem",
+                      }}
+                    >
+                      Descrição
+                    </th>
+                    <th
+                      style={{
+                        padding: "1rem",
+                        fontWeight: "600",
+                        fontSize: "0.9rem",
+                      }}
+                    >
+                      Tipo
+                    </th>
+                    <th
+                      style={{
+                        padding: "1rem",
+                        fontWeight: "600",
+                        fontSize: "0.9rem",
+                      }}
+                    >
+                      Categoria
+                    </th>
+                    <th
+                      style={{
+                        padding: "1rem",
+                        fontWeight: "600",
+                        fontSize: "0.9rem",
+                      }}
+                    >
+                      Valor
+                    </th>
+                    <th
+                      style={{
+                        padding: "1rem",
+                        fontWeight: "600",
+                        fontSize: "0.9rem",
+                      }}
+                    >
+                      Recorrência
+                    </th>
+                    <th
+                      className="text-end"
+                      style={{
+                        padding: "1rem",
+                        fontWeight: "600",
+                        fontSize: "0.9rem",
+                      }}
+                    >
+                      Ações
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {inactiveTransactions.map((transaction) => (
                     <tr key={transaction.id} className="text-muted">
-                      <td>{transaction.description}</td>
-                      <td>
+                      <td style={{ padding: "1rem", fontWeight: "500" }}>
+                        <strong>{transaction.description}</strong>
+                      </td>
+                      <td style={{ padding: "1rem" }}>
                         <Badge
-                          bg={
-                            transaction.type === "income" ? "success" : "danger"
-                          }
+                          bg={transaction.type === "income" ? "success" : "danger"}
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: "8px",
+                            fontWeight: "500",
+                            fontSize: "0.85rem",
+                          }}
                         >
-                          {transaction.type === "income"
-                            ? "Receita"
-                            : "Despesa"}
+                          {transaction.type === "income" ? "Receita" : "Despesa"}
                         </Badge>
                       </td>
-                      <td>{transaction.category}</td>
-                      <td>{formatCurrency(transaction.value)}</td>
-                      <td>
-                        <Badge bg="secondary">
+                      <td style={{ padding: "1rem" }}>
+                        <Badge
+                          bg="secondary"
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: "8px",
+                            fontWeight: "500",
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          {transaction.category}
+                        </Badge>
+                      </td>
+                      <td className="text-end" style={{ padding: "1rem" }}>
+                        <span
+                          className={
+                            transaction.type === "income"
+                              ? "text-success fw-bold"
+                              : "text-danger fw-bold"
+                          }
+                          style={{ fontSize: "1rem" }}
+                        >
+                          {transaction.type === "income" ? "+" : "-"}
+                          {formatCurrency(transaction.value)}
+                        </span>
+                      </td>
+                      <td style={{ padding: "1rem" }}>
+                        <Badge
+                          bg="primary"
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: "8px",
+                            fontWeight: "500",
+                            fontSize: "0.85rem",
+                          }}
+                        >
                           {getRecurrenceLabel(transaction)}
                         </Badge>
                       </td>
-                      <td className="text-end">
+                      <td className="text-end" style={{ padding: "1rem" }}>
                         <Button
                           variant="outline-primary"
                           size="sm"
                           className="me-2"
                           onClick={() => handleEdit(transaction)}
+                          style={{ borderRadius: "8px", padding: "6px 12px" }}
                         >
                           <FiEdit2 />
                         </Button>
@@ -298,6 +501,7 @@ export default function RecorrentesPage() {
                           variant="outline-danger"
                           size="sm"
                           onClick={() => handleDelete(transaction.id)}
+                          style={{ borderRadius: "8px", padding: "6px 12px" }}
                         >
                           <FiTrash2 />
                         </Button>
