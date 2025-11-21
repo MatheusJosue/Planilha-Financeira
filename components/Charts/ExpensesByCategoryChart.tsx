@@ -35,19 +35,11 @@ const CustomTooltip = ({
   if (active && payload && payload.length) {
     const data = payload[0];
     return (
-      <div
-        style={{
-          background: "white",
-          padding: "12px 16px",
-          borderRadius: "12px",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-          border: "2px solid #e2e8f0",
-        }}
-      >
-        <p style={{ fontWeight: "600", marginBottom: "8px", color: "#333" }}>
+      <div className="custom-tooltip">
+        <p className="custom-tooltip-title">
           {data.name}
         </p>
-        <p style={{ color: "#dc3545", margin: "4px 0", fontWeight: "500" }}>
+        <p className="custom-tooltip-expense">
           💰 {formatCurrency(data.value || 0)}
         </p>
         <p style={{ color: "#666", margin: "4px 0", fontSize: "0.9rem" }}>

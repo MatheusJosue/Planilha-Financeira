@@ -22,11 +22,7 @@ export function EmptyState({
     <Card className="border-0 shadow-card">
       <Card.Body className="text-center py-5">
         <div
-          className="mb-4"
-          style={{
-            fontSize: "5rem",
-            filter: "grayscale(20%)",
-          }}
+          className="mb-4 empty-state-icon"
         >
           {icon}
         </div>
@@ -36,13 +32,7 @@ export function EmptyState({
           <Button
             size="lg"
             onClick={onAction}
-            className="d-flex align-items-center gap-2 mx-auto shadow"
-            style={{
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-              border: "none",
-              borderRadius: "12px",
-              padding: "12px 32px",
-            }}
+            className="d-flex align-items-center gap-2 mx-auto shadow month-selector-button month-selector-button-primary"
           >
             <FiPlus size={20} /> {actionLabel}
           </Button>

@@ -32,10 +32,7 @@ export function Navigation() {
     <Navbar
       expand="lg"
       sticky="top"
-      className="py-3"
-      style={{
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-      }}
+      className="py-3 navbar-gradient"
     >
       <Container fluid className="px-4">
         <Navbar.Brand
@@ -70,9 +67,6 @@ export function Navigation() {
               className={`d-flex align-items-center gap-2 px-3 py-2 rounded-3 fw-semibold ${
                 pathname === "/" ? "bg-white text-primary" : "text-white"
               }`}
-              style={{
-                transition: "all 0.3s ease",
-              }}
             >
               <FiHome size={18} /> Dashboard
             </Nav.Link>

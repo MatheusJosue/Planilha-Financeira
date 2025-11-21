@@ -23,40 +23,26 @@ const CustomTooltip = ({
   payload?: ReadonlyArray<{ payload: { month: string }; value?: number }>;
 }) => {
   if (active && payload && payload.length) {
+    const positiveBalance = (payload[0]?.value || 0) > (payload[1]?.value || 0);
     return (
-      <div
-        style={{
-          background: "white",
-          padding: "12px 16px",
-          borderRadius: "12px",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-          border: "2px solid #e2e8f0",
-        }}
-      >
-        <p style={{ fontWeight: "600", marginBottom: "8px", color: "#333" }}>
+      <div className="custom-tooltip">
+        <p className="custom-tooltip-title">
           {payload[0]?.payload.month}
         </p>
-        <p style={{ color: "#28a745", margin: "4px 0", fontWeight: "500" }}>
+        <p className="custom-tooltip-income">
           💚 Receitas: {formatCurrency(payload[0]?.value || 0)}
         </p>
-        <p style={{ color: "#dc3545", margin: "4px 0", fontWeight: "500" }}>
+        <p className="custom-tooltip-expense">
           ❤️ Despesas: {formatCurrency(payload[1]?.value || 0)}
         </p>
         <p
+          className="mt-2 pt-2 border-top"
           style={{
-            marginTop: "8px",
-            paddingTop: "8px",
-            borderTop: "1px solid #e2e8f0",
             fontWeight: "600",
-            color:
-              (payload[0]?.value || 0) > (payload[1]?.value || 0)
-                ? "#28a745"
-                : "#dc3545",
+            color: positiveBalance ? "#28a745" : "#dc3545",
           }}
         >
-          {(payload[0]?.value || 0) > (payload[1]?.value || 0)
-            ? "📈 Saldo positivo"
-            : "📉 Saldo negativo"}
+          {positiveBalance ? "📈 Saldo positivo" : "📉 Saldo negativo"}
           :{" "}
           {formatCurrency(
             Math.abs((payload[0]?.value || 0) - (payload[1]?.value || 0))

@@ -1,0 +1,242 @@
+/* Component Styles */
+
+/* Custom Tooltip Styles */
+.custom-tooltip {
+  background: white;
+  padding: 12px 16px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  border: 2px solid #e2e8f0;
+}
+
+.custom-tooltip-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.custom-tooltip-income {
+  color: #28a745;
+  margin: 4px 0;
+  font-weight: 500;
+}
+
+.custom-tooltip-expense {
+  color: #dc3545;
+  margin: 4px 0;
+  font-weight: 500;
+}
+
+/* Skeleton Loading Styles */
+.skeleton-pulse {
+  animation: skeleton-pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes skeleton-pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Empty State Styles */
+.empty-state-icon {
+  font-size: 5rem;
+  filter: grayscale(20%);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Floating Add Button Styles */
+.floating-button {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.floating-button:hover, .floating-button:focus {
+  transform: scale(1.1) rotate(90deg);
+  box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
+}
+
+.floating-button.hover {
+  transform: scale(1.1) rotate(90deg);
+  box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
+}
+
+/* Loading Screen Styles */
+.loading-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.loading-screen h4 {
+  color: white;
+  font-weight: bold;
+}
+
+.loading-screen p {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* Navigation Styles */
+.navbar-gradient {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+/* Summary Cards Styles */
+.summary-card-gradient {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
+}
+
+.summary-card-gradient-income {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
+}
+
+.summary-card-gradient-expense {
+  background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%) !important;
+}
+
+.summary-card-gradient-balance {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+.summary-card-gradient-negative {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
+}
+
+/* Card Styles */
+.shadow-card {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+  border: none !important;
+}
+
+/* Animation */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-in;
+}
+
+.animate-fade-in-delay-1 {
+  animation: fadeIn 0.5s ease-in 0.1s;
+}
+
+.animate-fade-in-delay-2 {
+  animation: fadeIn 0.5s ease-in 0.2s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Month Selector Base Button */
+.month-selector-button {
+  transition: all 0.2s ease-in-out;
+  border: none;
+  outline: none;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.month-selector-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.month-selector-button-primary {
+  background-color: #667eea !important;
+  color: white !important;
+}
+
+.month-selector-button-secondary {
+  background-color: #1a202c !important;
+  color: white !important;
+}
+
+.month-selector-button-success {
+  background-color: #11998e !important;
+  color: white !important;
+}
+
+/* Dashboard Skeleton Item */
+.dashboard-skeleton-item {
+  height: 12px;
+  background: #e2e8f0;
+  border-radius: 6px;
+}
+
+.dashboard-skeleton-value {
+  height: 32px;
+  width: 120px;
+  background: #e2e8f0;
+  border-radius: 8px;
+}
+
+.dashboard-skeleton-label {
+  height: 12px;
+  width: 90px;
+  background: #e2e8f0;
+  border-radius: 6px;
+}
+
+/* Summary Card Circle Icon */
+.summary-card-circle-icon {
+  width: 70px;
+  height: 70px;
+  background: rgba(255, 255, 255, 0.2) !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+/* Button with Icon */
+.button-with-icon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .floating-button {
+    bottom: 1.5rem;
+    right: 1.5rem;
+    width: 60px;
+    height: 60px;
+  }
+}

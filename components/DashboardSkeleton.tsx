@@ -13,30 +13,21 @@ export function DashboardSkeleton() {
                 <div className="d-flex align-items-center justify-content-between">
                   <div style={{ flex: 1 }}>
                     <div
-                      className="mb-2 skeleton-pulse"
+                      className="mb-2 skeleton-pulse dashboard-skeleton-item"
                       style={{
-                        height: "12px",
                         width: "60px",
-                        background: "#e2e8f0",
-                        borderRadius: "6px",
                       }}
                     />
                     <div
-                      className="mb-2 skeleton-pulse"
+                      className="mb-2 skeleton-pulse dashboard-skeleton-value"
                       style={{
-                        height: "32px",
                         width: "120px",
-                        background: "#e2e8f0",
-                        borderRadius: "8px",
                       }}
                     />
                     <div
-                      className="skeleton-pulse"
+                      className="skeleton-pulse dashboard-skeleton-label"
                       style={{
-                        height: "12px",
                         width: "90px",
-                        background: "#e2e8f0",
-                        borderRadius: "6px",
                       }}
                     />
                   </div>
