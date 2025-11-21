@@ -112,7 +112,7 @@ export default function RecurringTransactionForm({
           }}
         >
           <Row>
-            <Col md={12} className="mb-3">
+            <Col md={6} className="mb-3">
               <Form.Group>
                 <Form.Label style={{ color: "var(--foreground)" }}>
                   Descrição
@@ -131,6 +131,39 @@ export default function RecurringTransactionForm({
                     borderColor: "var(--border-color)",
                   }}
                 />
+              </Form.Group>
+            </Col>
+
+            <Col md={6} className="mb-3">
+              <Form.Group>
+                <Form.Label style={{ color: "var(--foreground)" }}>
+                  Valor
+                </Form.Label>
+                <InputGroup>
+                  <InputGroup.Text
+                    style={{
+                      backgroundColor: "var(--input-bg)",
+                      color: "var(--foreground)",
+                      borderColor: "var(--border-color)",
+                    }}
+                  >
+                    R$
+                  </InputGroup.Text>
+                  <Form.Control
+                    type="text"
+                    value={formData.value}
+                    onChange={(e) =>
+                      setFormData({ ...formData, value: e.target.value })
+                    }
+                    placeholder="Ex: 45,00 ou 45.00"
+                    required
+                    style={{
+                      backgroundColor: "var(--input-bg)",
+                      color: "var(--foreground)",
+                      borderColor: "var(--border-color)",
+                    }}
+                  />
+                </InputGroup>
               </Form.Group>
             </Col>
 
@@ -182,39 +215,6 @@ export default function RecurringTransactionForm({
                     </option>
                   ))}
                 </Form.Select>
-              </Form.Group>
-            </Col>
-
-            <Col md={6} className="mb-3">
-              <Form.Group>
-                <Form.Label style={{ color: "var(--foreground)" }}>
-                  Valor
-                </Form.Label>
-                <InputGroup>
-                  <InputGroup.Text
-                    style={{
-                      backgroundColor: "var(--input-bg)",
-                      color: "var(--foreground)",
-                      borderColor: "var(--border-color)",
-                    }}
-                  >
-                    R$
-                  </InputGroup.Text>
-                  <Form.Control
-                    type="text"
-                    value={formData.value}
-                    onChange={(e) =>
-                      setFormData({ ...formData, value: e.target.value })
-                    }
-                    placeholder="Ex: 45,00 ou 45.00"
-                    required
-                    style={{
-                      backgroundColor: "var(--input-bg)",
-                      color: "var(--foreground)",
-                      borderColor: "var(--border-color)",
-                    }}
-                  />
-                </InputGroup>
               </Form.Group>
             </Col>
 

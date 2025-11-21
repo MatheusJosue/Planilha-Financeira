@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Modal, Button, Form } from "react-bootstrap";
+import { Modal, Button, Form, Col, Row } from "react-bootstrap";
 import { Transaction, TransactionType } from "@/types";
 import { useFinanceStore } from "@/store/financeStore";
 import { getTodayISO } from "@/utils/formatDate";
@@ -101,6 +101,35 @@ export function TransactionForm({
       </Modal.Header>
       <Form onSubmit={handleSubmit}>
         <Modal.Body>
+          <Row>
+            <Col md={6} className="mb-3">
+              <InputField
+                label="Descrição"
+                value={formData.description}
+                onChange={(value) =>
+                  setFormData({ ...formData, description: value })
+                }
+                placeholder="Ex: Supermercado, Salário..."
+                required
+              />
+            </Col>
+
+            <Col md={6} className="mb-3">
+              <CurrencyInput
+                label="Valor"
+                value={formData.value}
+                onChange={(value) => setFormData({ ...formData, value })}
+                labelStyle={{ color: "var(--foreground)" }}
+                style={{
+                  backgroundColor: "var(--input-bg)",
+                  color: "var(--foreground)",
+                  borderColor: "var(--border-color)",
+                }}
+                required
+              />
+            </Col>
+          </Row>
+
           <SelectField
             label="Tipo"
             value={formData.type}
@@ -114,34 +143,11 @@ export function TransactionForm({
             required
           />
 
-          <InputField
-            label="Descrição"
-            value={formData.description}
-            onChange={(value) =>
-              setFormData({ ...formData, description: value })
-            }
-            placeholder="Ex: Supermercado, Salário..."
-            required
-          />
-
           <SelectField
             label="Categoria"
             value={formData.category}
             onChange={(value) => setFormData({ ...formData, category: value })}
             options={categories.map((cat) => ({ value: cat, label: cat }))}
-            required
-          />
-
-          <CurrencyInput
-            label="Valor"
-            value={formData.value}
-            onChange={(value) => setFormData({ ...formData, value })}
-            labelStyle={{ color: "var(--foreground)" }}
-            style={{
-              backgroundColor: "var(--input-bg)",
-              color: "var(--foreground)",
-              borderColor: "var(--border-color)",
-            }}
             required
           />
 
