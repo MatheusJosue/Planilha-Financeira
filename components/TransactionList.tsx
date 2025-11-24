@@ -29,6 +29,8 @@ import { formatDate } from "@/utils/formatDate";
 interface TransactionListProps {
   onEdit: (transaction: Transaction) => void;
   onDuplicate?: (transaction: Transaction) => void;
+  showPredicted?: boolean;
+  typeFilter?: "income" | "expense";
 }
 
 interface SortableRowProps {
@@ -181,7 +183,12 @@ function SortableRow({
   );
 }
 
-export function TransactionList({ onEdit, onDuplicate }: TransactionListProps) {
+export function TransactionList({
+  onEdit,
+  onDuplicate,
+  showPredicted = false,
+  typeFilter,
+}: TransactionListProps) {
   const { transactions, deleteTransaction, categories } = useFinanceStore();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<"all" | "income" | "expense">(
@@ -204,6 +211,14 @@ export function TransactionList({ onEdit, onDuplicate }: TransactionListProps) {
   };
 
   const filteredTransactions = transactions.filter((t) => {
+    const isPredicted = t.is_predicted === true;
+
+    if (showPredicted && !isPredicted) return false;
+    if (!showPredicted && isPredicted) return false;
+
+    // Aplicar filtro de tipo se fornecido
+    if (typeFilter && t.type !== typeFilter) return false;
+
     const matchesSearch = t.description
       .toLowerCase()
       .includes(searchTerm.toLowerCase());

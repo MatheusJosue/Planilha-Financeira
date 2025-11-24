@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Modal, Form, Button, Row, Col, InputGroup } from "react-bootstrap";
+import { FiRepeat, FiEdit } from "react-icons/fi";
 import { RecurringTransaction, RecurrenceType, TransactionType } from "@/types";
 import { useFinanceStore } from "@/store/financeStore";
 import { parseCurrency } from "@/utils/formatCurrency";
@@ -24,7 +25,7 @@ export default function RecurringTransactionForm({
     if (transaction) {
       return {
         description: transaction.description,
-        type: transaction.type,
+        type: "expense" as TransactionType,
         category: transaction.category,
         value: transaction.value.toString(),
         recurrence_type: transaction.recurrence_type,
@@ -92,29 +93,70 @@ export default function RecurringTransactionForm({
   };
 
   return (
-    <Modal show={show} onHide={onHide} size="lg" centered data-bs-theme="dark">
+    <Modal show={show} onHide={onHide} size="lg" centered>
       <Modal.Header
         closeButton
         style={{
-          backgroundColor: "var(--card-bg)",
-          color: "var(--foreground)",
+          background: "linear-gradient(135deg, #dc3545 0%, #d63384 100%)",
+          color: "#fff",
+          borderBottom: "none",
         }}
       >
-        <Modal.Title style={{ color: "var(--foreground)" }}>
-          {transaction ? "Editar" : "Nova"} Transação Recorrente
+        <Modal.Title
+          className="d-flex align-items-center gap-2"
+          style={{ color: "#fff" }}
+        >
+          {transaction ? (
+            <>
+              <FiEdit size={24} />
+              Editar Conta Recorrente
+            </>
+          ) : (
+            <>
+              <FiRepeat size={24} />
+              Nova Conta Recorrente
+            </>
+          )}
         </Modal.Title>
       </Modal.Header>
       <Form onSubmit={handleSubmit}>
-        <Modal.Body
-          style={{
-            backgroundColor: "var(--card-bg)",
-            color: "var(--foreground)",
-          }}
-        >
+        <Modal.Body style={{ padding: "2rem" }}>
           <Row>
-            <Col md={6} className="mb-3">
+            <Col md={12} className="mb-3">
               <Form.Group>
-                <Form.Label style={{ color: "var(--foreground)" }}>
+                <Form.Label
+                  style={{ color: "var(--foreground)", fontWeight: 500 }}
+                >
+                  Tipo de Recorrência
+                </Form.Label>
+                <Form.Select
+                  value={formData.recurrence_type}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      recurrence_type: e.target.value as RecurrenceType,
+                    })
+                  }
+                  style={{
+                    backgroundColor: "var(--input-bg)",
+                    color: "var(--foreground)",
+                    borderColor: "var(--border-color)",
+                  }}
+                >
+                  <option value="fixed">📅 Fixa Mensal (ex: aluguel)</option>
+                  <option value="installment">📊 Parcelada (ex: 12x)</option>
+                  <option value="variable">
+                    📈 Variável Mensal (ex: luz, água)
+                  </option>
+                </Form.Select>
+              </Form.Group>
+            </Col>
+
+            <Col md={12} className="mb-3">
+              <Form.Group>
+                <Form.Label
+                  style={{ color: "var(--foreground)", fontWeight: 500 }}
+                >
                   Descrição
                 </Form.Label>
                 <Form.Control
@@ -134,9 +176,11 @@ export default function RecurringTransactionForm({
               </Form.Group>
             </Col>
 
-            <Col md={6} className="mb-3">
+            <Col md={12} className="mb-3">
               <Form.Group>
-                <Form.Label style={{ color: "var(--foreground)" }}>
+                <Form.Label
+                  style={{ color: "var(--foreground)", fontWeight: 500 }}
+                >
                   Valor
                 </Form.Label>
                 <InputGroup>
@@ -155,7 +199,7 @@ export default function RecurringTransactionForm({
                     onChange={(e) =>
                       setFormData({ ...formData, value: e.target.value })
                     }
-                    placeholder="Ex: 45,00 ou 45.00"
+                    placeholder="Ex: 45,00"
                     required
                     style={{
                       backgroundColor: "var(--input-bg)",
@@ -167,34 +211,11 @@ export default function RecurringTransactionForm({
               </Form.Group>
             </Col>
 
-            <Col md={6} className="mb-3">
+            <Col md={12} className="mb-3">
               <Form.Group>
-                <Form.Label style={{ color: "var(--foreground)" }}>
-                  Tipo
-                </Form.Label>
-                <Form.Select
-                  value={formData.type}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      type: e.target.value as TransactionType,
-                    })
-                  }
-                  style={{
-                    backgroundColor: "var(--input-bg)",
-                    color: "var(--foreground)",
-                    borderColor: "var(--border-color)",
-                  }}
+                <Form.Label
+                  style={{ color: "var(--foreground)", fontWeight: 500 }}
                 >
-                  <option value="expense">Despesa</option>
-                  <option value="income">Receita</option>
-                </Form.Select>
-              </Form.Group>
-            </Col>
-
-            <Col md={6} className="mb-3">
-              <Form.Group>
-                <Form.Label style={{ color: "var(--foreground)" }}>
                   Categoria
                 </Form.Label>
                 <Form.Select
@@ -218,37 +239,11 @@ export default function RecurringTransactionForm({
               </Form.Group>
             </Col>
 
-            <Col md={6} className="mb-3">
+            <Col md={12} className="mb-3">
               <Form.Group>
-                <Form.Label style={{ color: "var(--foreground)" }}>
-                  Tipo de Recorrência
-                </Form.Label>
-                <Form.Select
-                  value={formData.recurrence_type}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      recurrence_type: e.target.value as RecurrenceType,
-                    })
-                  }
-                  style={{
-                    backgroundColor: "var(--input-bg)",
-                    color: "var(--foreground)",
-                    borderColor: "var(--border-color)",
-                  }}
+                <Form.Label
+                  style={{ color: "var(--foreground)", fontWeight: 500 }}
                 >
-                  <option value="fixed">Fixa Mensal (ex: aluguel)</option>
-                  <option value="installment">Parcelada (ex: 12x)</option>
-                  <option value="variable">
-                    Variável Mensal (ex: luz, água)
-                  </option>
-                </Form.Select>
-              </Form.Group>
-            </Col>
-
-            <Col md={6} className="mb-3">
-              <Form.Group>
-                <Form.Label style={{ color: "var(--foreground)" }}>
                   Dia do Vencimento
                 </Form.Label>
                 <Form.Control
@@ -272,9 +267,11 @@ export default function RecurringTransactionForm({
               </Form.Group>
             </Col>
 
-            <Col md={6} className="mb-3">
+            <Col md={12} className="mb-3">
               <Form.Group>
-                <Form.Label style={{ color: "var(--foreground)" }}>
+                <Form.Label
+                  style={{ color: "var(--foreground)", fontWeight: 500 }}
+                >
                   Data de Início
                 </Form.Label>
                 <Form.Control
@@ -294,9 +291,11 @@ export default function RecurringTransactionForm({
             </Col>
 
             {formData.recurrence_type === "installment" && (
-              <Col md={6} className="mb-3">
+              <Col md={12} className="mb-3">
                 <Form.Group>
-                  <Form.Label style={{ color: "var(--foreground)" }}>
+                  <Form.Label
+                    style={{ color: "var(--foreground)", fontWeight: 500 }}
+                  >
                     Número de Parcelas
                   </Form.Label>
                   <Form.Control
@@ -322,9 +321,11 @@ export default function RecurringTransactionForm({
             )}
 
             {formData.recurrence_type === "fixed" && (
-              <Col md={6} className="mb-3">
+              <Col md={12} className="mb-3">
                 <Form.Group>
-                  <Form.Label style={{ color: "var(--foreground)" }}>
+                  <Form.Label
+                    style={{ color: "var(--foreground)", fontWeight: 500 }}
+                  >
                     Data de Término (opcional)
                   </Form.Label>
                   <Form.Control
@@ -364,12 +365,35 @@ export default function RecurringTransactionForm({
             </Col>
           </Row>
         </Modal.Body>
-        <Modal.Footer style={{ backgroundColor: "var(--card-bg)" }}>
-          <Button variant="secondary" onClick={onHide}>
+        <Modal.Footer
+          style={{
+            backgroundColor: "var(--card-bg)",
+            borderTop: "2px solid",
+            borderImage: "linear-gradient(135deg, #dc3545 0%, #d63384 100%) 1",
+            padding: "1rem 2rem",
+          }}
+        >
+          <Button
+            variant="outline-secondary"
+            onClick={onHide}
+            style={{
+              borderRadius: "8px",
+              padding: "0.5rem 1.5rem",
+            }}
+          >
             Cancelar
           </Button>
-          <Button variant="primary" type="submit">
-            {transaction ? "Atualizar" : "Criar"}
+          <Button
+            type="submit"
+            style={{
+              background: "linear-gradient(135deg, #dc3545 0%, #d63384 100%)",
+              border: "none",
+              borderRadius: "8px",
+              padding: "0.5rem 1.5rem",
+              color: "white",
+            }}
+          >
+            {transaction ? "💾 Salvar Alterações" : "✨ Criar Conta"}
           </Button>
         </Modal.Footer>
       </Form>

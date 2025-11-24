@@ -12,7 +12,6 @@ import {
   FiUser,
   FiMoon,
   FiSun,
-  FiRepeat,
 } from "react-icons/fi";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
@@ -29,11 +28,7 @@ export function Navigation() {
   };
 
   return (
-    <Navbar
-      expand="lg"
-      sticky="top"
-      className="py-3 navbar-gradient"
-    >
+    <Navbar expand="lg" sticky="top" className="py-3 navbar-gradient">
       <Container fluid className="px-4">
         <Navbar.Brand
           as={Link}
@@ -83,22 +78,7 @@ export function Navigation() {
                 transition: "all 0.3s ease",
               }}
             >
-              <FiList size={18} /> Transações
-            </Nav.Link>
-            <Nav.Link
-              as={Link}
-              href="/recorrentes"
-              active={pathname === "/recorrentes"}
-              className={`d-flex align-items-center gap-2 px-3 py-2 rounded-3 fw-semibold ${
-                pathname === "/recorrentes"
-                  ? "bg-white text-primary"
-                  : "text-white"
-              }`}
-              style={{
-                transition: "all 0.3s ease",
-              }}
-            >
-              <FiRepeat size={18} /> Recorrentes
+              <FiList size={18} /> Financeiro
             </Nav.Link>
             <Nav.Link
               as={Link}

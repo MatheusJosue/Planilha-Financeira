@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "../components/styles/components.css";
 
 :root {
   --background: #f5f7fa;
@@ -49,8 +50,8 @@ body {
   background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
 }
 
-main.container-fluid.py-4 {  
-  padding: 8vh;  
+main.container-fluid.py-4 {
+  padding: 8vh;
 }
 .card {
   background: var(--card-bg);

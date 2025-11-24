@@ -5,7 +5,7 @@
   background: white;
   padding: 12px 16px;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   border: 2px solid #e2e8f0;
 }
 
@@ -62,11 +62,12 @@
   position: fixed;
   bottom: 2rem;
   right: 2rem;
-  width: 70px;
-  height: 70px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.35),
+    0 4px 12px rgba(118, 75, 162, 0.25);
   z-index: 1000;
   display: flex;
   align-items: center;
@@ -74,17 +75,87 @@
   border: none;
   color: white;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: floatingPulse 3s ease-in-out infinite;
+  backdrop-filter: blur(10px);
 }
 
-.floating-button:hover, .floating-button:focus {
-  transform: scale(1.1) rotate(90deg);
-  box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
+.floating-button::before {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  opacity: 0.3;
+  animation: pulseRing 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  z-index: -1;
 }
 
-.floating-button.hover {
+.floating-button svg {
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+@keyframes floatingPulse {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-6px) scale(1.02);
+  }
+}
+
+@keyframes pulseRing {
+  0% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: scale(1.25);
+    opacity: 0.15;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.floating-button:hover,
+.floating-button:focus {
   transform: scale(1.1) rotate(90deg);
-  box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
+  box-shadow: 0 12px 32px rgba(102, 126, 234, 0.5),
+    0 6px 16px rgba(118, 75, 162, 0.35);
+  animation: none;
+}
+
+.floating-button:hover::before,
+.floating-button:focus::before {
+  animation: none;
+  opacity: 0;
+}
+
+.floating-button:active {
+  transform: scale(1.05) rotate(90deg);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4),
+    0 3px 8px rgba(118, 75, 162, 0.3);
+}
+
+/* Responsivo para mobile */
+@media (max-width: 768px) {
+  .floating-button {
+    width: 56px;
+    height: 56px;
+    bottom: 1.5rem;
+    right: 1.5rem;
+  }
+
+  .floating-button svg {
+    width: 24px;
+    height: 24px;
+  }
 }
 
 /* Loading Screen Styles */
@@ -138,7 +209,8 @@
 
 /* Card Styles */
 .shadow-card {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
   border: none !important;
 }
 
@@ -156,8 +228,14 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Month Selector Base Button */
