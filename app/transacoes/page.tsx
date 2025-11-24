@@ -206,8 +206,8 @@ export default function TransactionsPage() {
 
   return (
     <div className="animate-fade-in">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <div>
+      <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+        <div className="mb-3 mb-md-0">
           <h1 className="display-5 fw-bold gradient-text mb-2">Financeiro</h1>
           <p className="text-muted">
             Gerencie transações, recorrentes e previsões
@@ -224,16 +224,22 @@ export default function TransactionsPage() {
               setShowForm(true);
             }
           }}
-          className="d-flex align-items-center gap-2 shadow"
+          className="d-flex align-items-center justify-content-center gap-2 shadow w-100 w-md-auto"
           style={{
             background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
             border: "none",
             borderRadius: "12px",
             padding: "12px 24px",
+            maxWidth: "100%",
           }}
         >
           <FiPlus size={20} />
-          {activeTab === "income" ? "Nova Receita" : "Nova Despesa"}
+          <span className="d-none d-sm-inline">
+            {activeTab === "income" ? "Nova Receita" : "Nova Despesa"}
+          </span>
+          <span className="d-inline d-sm-none">
+            {activeTab === "income" ? "Receita" : "Despesa"}
+          </span>
         </Button>
       </div>
 
@@ -242,12 +248,12 @@ export default function TransactionsPage() {
       )}
 
       {/* Cards de Resumo */}
-      <Row className="mb-4">
+      <Row className="mb-4 g-3">
         {activeTab === "transactions" && (
           <>
-            <Col md={4}>
+            <Col xs={12} md={4}>
               <Card
-                className="text-center shadow-sm"
+                className="text-center shadow-sm h-100"
                 style={{ borderRadius: "12px" }}
               >
                 <Card.Body>
@@ -264,9 +270,9 @@ export default function TransactionsPage() {
                 </Card.Body>
               </Card>
             </Col>
-            <Col md={4}>
+            <Col xs={12} md={4}>
               <Card
-                className="text-center shadow-sm"
+                className="text-center shadow-sm h-100"
                 style={{ borderRadius: "12px" }}
               >
                 <Card.Body>
@@ -283,9 +289,9 @@ export default function TransactionsPage() {
                 </Card.Body>
               </Card>
             </Col>
-            <Col md={4}>
+            <Col xs={12} md={4}>
               <Card
-                className="text-center shadow-sm"
+                className="text-center shadow-sm h-100"
                 style={{ borderRadius: "12px" }}
               >
                 <Card.Body>
@@ -305,9 +311,9 @@ export default function TransactionsPage() {
 
         {activeTab === "income" && (
           <>
-            <Col md={4}>
+            <Col xs={12} md={4}>
               <Card
-                className="text-center shadow-sm"
+                className="text-center shadow-sm h-100"
                 style={{ borderRadius: "12px" }}
               >
                 <Card.Body>
@@ -322,9 +328,9 @@ export default function TransactionsPage() {
                 </Card.Body>
               </Card>
             </Col>
-            <Col md={4}>
+            <Col xs={12} md={4}>
               <Card
-                className="text-center shadow-sm"
+                className="text-center shadow-sm h-100"
                 style={{ borderRadius: "12px" }}
               >
                 <Card.Body>
@@ -341,9 +347,9 @@ export default function TransactionsPage() {
                 </Card.Body>
               </Card>
             </Col>
-            <Col md={4}>
+            <Col xs={12} md={4}>
               <Card
-                className="text-center shadow-sm"
+                className="text-center shadow-sm h-100"
                 style={{ borderRadius: "12px" }}
               >
                 <Card.Body>
@@ -365,9 +371,9 @@ export default function TransactionsPage() {
 
         {activeTab === "predicted" && (
           <>
-            <Col md={4}>
+            <Col xs={12} md={4}>
               <Card
-                className="text-center shadow-sm"
+                className="text-center shadow-sm h-100"
                 style={{ borderRadius: "12px" }}
               >
                 <Card.Body>
@@ -388,9 +394,9 @@ export default function TransactionsPage() {
                 </Card.Body>
               </Card>
             </Col>
-            <Col md={4}>
+            <Col xs={12} md={4}>
               <Card
-                className="text-center shadow-sm"
+                className="text-center shadow-sm h-100"
                 style={{ borderRadius: "12px" }}
               >
                 <Card.Body>
@@ -411,9 +417,9 @@ export default function TransactionsPage() {
                 </Card.Body>
               </Card>
             </Col>
-            <Col md={4}>
+            <Col xs={12} md={4}>
               <Card
-                className="text-center shadow-sm"
+                className="text-center shadow-sm h-100"
                 style={{ borderRadius: "12px" }}
               >
                 <Card.Body>

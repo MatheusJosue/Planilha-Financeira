@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Modal, Button, Form, Col, Row, InputGroup } from "react-bootstrap";
+import { Modal, Button, Form, Col, Row } from "react-bootstrap";
 import { FiPlus, FiEdit } from "react-icons/fi";
 import { Transaction, TransactionType, RecurrenceType } from "@/types";
 import { useFinanceStore } from "@/store/financeStore";
@@ -41,6 +41,11 @@ export function TransactionForm({
         category: transaction.category,
         value: transaction.value.toString(),
         date: transaction.date,
+        isRecurring: false,
+        recurrence_type: "fixed" as RecurrenceType,
+        day_of_month: "5",
+        total_installments: "",
+        end_date: "",
       };
     }
     return {

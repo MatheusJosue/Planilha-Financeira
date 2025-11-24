@@ -330,13 +330,13 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      <Row className="g-4">
-        <Col lg={6}>
+      <Row className="g-3 g-md-4">
+        <Col xs={12} lg={6}>
           <Card
             className="border-0 shadow-card h-100"
             style={{ overflow: "hidden" }}
           >
-            <Card.Body className="p-4">
+            <Card.Body className="p-3 p-md-4">
               <div className="d-flex align-items-center gap-3 mb-3">
                 <div
                   className="d-flex align-items-center justify-content-center"
@@ -378,12 +378,12 @@ export default function SettingsPage() {
           </Card>
         </Col>
 
-        <Col lg={6}>
+        <Col xs={12} lg={6}>
           <Card
             className="border-0 shadow-card h-100"
             style={{ overflow: "hidden" }}
           >
-            <Card.Body className="p-4">
+            <Card.Body className="p-3 p-md-4">
               <div className="d-flex align-items-center gap-3 mb-3">
                 <div
                   className="d-flex align-items-center justify-content-center"
@@ -432,9 +432,9 @@ export default function SettingsPage() {
           </Card>
         </Col>
 
-        <Col lg={12}>
+        <Col xs={12}>
           <Card className="border-0 shadow-card">
-            <Card.Body className="p-4">
+            <Card.Body className="p-3 p-md-4">
               <div className="d-flex align-items-center gap-3 mb-4">
                 <div
                   className="d-flex align-items-center justify-content-center"
@@ -635,14 +635,14 @@ export default function SettingsPage() {
           </Card>
         </Col>
 
-        <Col lg={12}>
+        <Col xs={12}>
           <Card
             className="border-0 shadow-card"
             style={{
               borderLeft: "4px solid #dc3545",
             }}
           >
-            <Card.Body className="p-4">
+            <Card.Body className="p-3 p-md-4">
               <div className="d-flex align-items-center gap-3 mb-3">
                 <div
                   className="d-flex align-items-center justify-content-center"
