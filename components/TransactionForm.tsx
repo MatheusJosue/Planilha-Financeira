@@ -97,7 +97,6 @@ export function TransactionForm({
       });
     } else {
       if (formData.isRecurring) {
-        // Criar transação recorrente
         addRecurringTransaction({
           description: formData.description,
           type: formData.type,
@@ -113,7 +112,6 @@ export function TransactionForm({
             : undefined,
         });
       } else {
-        // Criar transação normal
         addTransaction({
           description: formData.description,
           type: formData.type,

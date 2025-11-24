@@ -153,8 +153,6 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
         return;
       }
 
-      console.log("Loading data for user:", user.id);
-
       const { data: userCategoriesData } = await supabaseClient
         .from('categories')
         .select('name, max_percentage, max_value')
@@ -249,12 +247,6 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       if (!monthsData[currentMonth]) {
         monthsData[currentMonth] = { transactions: [] };
       }
-
-      console.log("Current month:", currentMonth);
-      console.log("Transactions for current month:", monthsData[currentMonth]?.transactions.length);
-      console.log("Predicted transactions in current month:", 
-        monthsData[currentMonth]?.transactions.filter(t => t.is_predicted).length
-      );
 
       set({
         monthsData,
@@ -461,7 +453,6 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
 
     if (error) {
       if (error.code === '23505') {
-        console.log("Category already exists");
         const newCategoryLimits = { ...state.categoryLimits };
         if (maxPercentage !== undefined || maxValue !== undefined) {
           newCategoryLimits[category] = {
@@ -512,7 +503,6 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
 
       if (error) {
         if (error.code === '23505') {
-          console.log("Category already hidden");
           return;
         }
         console.error("Error hiding category:", error);
@@ -728,7 +718,6 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     const { data: { user } } = await supabaseClient.auth.getUser();
 
     if (!user) {
-      console.log("No user found for loading recurring transactions");
       return;
     }
 
@@ -743,7 +732,6 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       return;
     }
 
-    console.log("Recurring transactions from DB:", data);
     set({ recurringTransactions: data || [] });
   },
 
@@ -752,15 +740,11 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     const predicted: Transaction[] = [];
     const today = new Date();
 
-    console.log("Generating predictions for", state.recurringTransactions.length, "recurring transactions");
 
     state.recurringTransactions.forEach((recurring) => {
       if (!recurring.is_active) {
-        console.log("Skipping inactive recurring:", recurring.description);
         return;
       }
-
-      console.log("Processing recurring:", recurring.description, recurring.value);
 
       const startDate = new Date(recurring.start_date);
       
@@ -793,7 +777,6 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
           is_predicted: true,
         };
         
-        console.log("Generated prediction for month", month, ":", predictedTransaction.value);
         predicted.push(predictedTransaction);
       }
     });

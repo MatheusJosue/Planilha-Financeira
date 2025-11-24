@@ -1,8 +1,14 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, Button, Form, Badge, Row, Col, Alert } from "react-bootstrap";
-import { FiDownload, FiUpload, FiTrash2, FiPlus } from "react-icons/fi";
+import {
+  FiDownload,
+  FiUpload,
+  FiTrash2,
+  FiPlus,
+  FiCalendar,
+} from "react-icons/fi";
 import { useFinanceStore } from "@/store/financeStore";
 import { DEFAULT_CATEGORIES } from "@/types";
 import {
@@ -30,6 +36,35 @@ export default function SettingsPage() {
   const [maxPercentage, setMaxPercentage] = useState("");
   const [maxValue, setMaxValue] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Configuração de períodos
+  const [periodSeparationEnabled, setPeriodSeparationEnabled] = useState(false);
+  const [period1End, setPeriod1End] = useState(15);
+  const [period2Start, setPeriod2Start] = useState(16);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    const savedEnabled = localStorage.getItem("periodSeparationEnabled");
+    const saved1 = localStorage.getItem("paymentPeriod1End");
+    const saved2 = localStorage.getItem("paymentPeriod2Start");
+
+    if (savedEnabled) setPeriodSeparationEnabled(savedEnabled === "true");
+    if (saved1) setPeriod1End(parseInt(saved1));
+    if (saved2) setPeriod2Start(parseInt(saved2));
+
+    setIsHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (isHydrated) {
+      localStorage.setItem(
+        "periodSeparationEnabled",
+        periodSeparationEnabled.toString()
+      );
+      localStorage.setItem("paymentPeriod1End", period1End.toString());
+      localStorage.setItem("paymentPeriod2Start", period2Start.toString());
+    }
+  }, [isHydrated, periodSeparationEnabled, period1End, period2Start]);
 
   const handleExport = async () => {
     try {
@@ -428,6 +463,154 @@ export default function SettingsPage() {
                 <FiUpload size={18} />
                 <span>Selecionar Arquivo</span>
               </Button>
+            </Card.Body>
+          </Card>
+        </Col>
+
+        <Col xs={12}>
+          <Card className="border-0 shadow-card">
+            <Card.Body className="p-3 p-md-4">
+              <div className="d-flex align-items-center gap-3 mb-4">
+                <div
+                  className="d-flex align-items-center justify-content-center"
+                  style={{
+                    width: "50px",
+                    height: "50px",
+                    borderRadius: "12px",
+                    background:
+                      "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                  }}
+                >
+                  <FiCalendar size={24} className="text-white" />
+                </div>
+                <div>
+                  <h5 className="mb-0 fw-bold">Períodos de Pagamento</h5>
+                  <small className="text-muted">
+                    Configure a separação de contas por períodos mensais
+                  </small>
+                </div>
+              </div>
+
+              <div className="mb-3">
+                <div className="d-flex align-items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="periodSeparationToggle"
+                    checked={periodSeparationEnabled}
+                    onChange={(e) =>
+                      setPeriodSeparationEnabled(e.target.checked)
+                    }
+                    className="form-check-input"
+                    style={{
+                      width: "20px",
+                      height: "20px",
+                      cursor: "pointer",
+                      borderColor: "#667eea",
+                    }}
+                  />
+                  <label
+                    htmlFor="periodSeparationToggle"
+                    className="mb-0 fw-semibold d-flex align-items-center gap-2"
+                    style={{ cursor: "pointer" }}
+                  >
+                    📅 Separar contas em 2 períodos de pagamento
+                    {periodSeparationEnabled && (
+                      <Badge
+                        bg="success"
+                        style={{ fontSize: "0.7rem", fontWeight: "normal" }}
+                      >
+                        Ativado ✓
+                      </Badge>
+                    )}
+                  </label>
+                </div>
+                <small className="text-muted ms-4 ps-2 d-block mt-1">
+                  {periodSeparationEnabled
+                    ? "Suas transações serão organizadas em dois períodos mensais diferentes (ex: dia 10 e dia 20)"
+                    : "Ative para organizar suas contas em dois períodos mensais diferentes"}
+                </small>
+              </div>
+
+              {periodSeparationEnabled && (
+                <div
+                  className="p-3 mt-3"
+                  style={{
+                    background: "rgba(102, 126, 234, 0.05)",
+                    borderRadius: "12px",
+                    border: "2px solid rgba(102, 126, 234, 0.2)",
+                  }}
+                >
+                  <Row className="g-3">
+                    <Col xs={12} md={6}>
+                      <Form.Group>
+                        <Form.Label className="small fw-semibold text-muted mb-2">
+                          1º Período: até dia
+                        </Form.Label>
+                        <Form.Control
+                          type="number"
+                          min="1"
+                          max="31"
+                          value={period1End}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value);
+                            if (val >= 1 && val <= 31) {
+                              setPeriod1End(val);
+                              if (val < 31) {
+                                setPeriod2Start(val + 1);
+                              }
+                            }
+                          }}
+                          className="text-center fw-bold"
+                          style={{
+                            borderRadius: "10px",
+                            border: "2px solid #667eea",
+                            padding: "12px",
+                            fontSize: "1.1rem",
+                          }}
+                        />
+                      </Form.Group>
+                    </Col>
+                    <Col xs={12} md={6}>
+                      <Form.Group>
+                        <Form.Label className="small fw-semibold text-muted mb-2">
+                          2º Período: a partir do dia
+                        </Form.Label>
+                        <Form.Control
+                          type="number"
+                          min="1"
+                          max="31"
+                          value={period2Start}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value);
+                            if (val >= 1 && val <= 31 && val > period1End) {
+                              setPeriod2Start(val);
+                            }
+                          }}
+                          className="text-center fw-bold"
+                          style={{
+                            borderRadius: "10px",
+                            border: "2px solid #667eea",
+                            padding: "12px",
+                            fontSize: "1.1rem",
+                          }}
+                        />
+                      </Form.Group>
+                    </Col>
+                  </Row>
+                  <div className="text-center mt-3">
+                    <Badge
+                      bg="secondary"
+                      style={{ fontSize: "0.75rem", padding: "6px 12px" }}
+                    >
+                      💾 Salvo automaticamente
+                    </Badge>
+                  </div>
+                  <small className="text-muted d-block mt-3 text-center">
+                    💡 Exemplo: Se você recebe no dia 10 e no dia 20, configure
+                    o 1º período até dia 10 e o 2º período a partir do dia 11
+                  </small>
+                </div>
+              )}
             </Card.Body>
           </Card>
         </Col>

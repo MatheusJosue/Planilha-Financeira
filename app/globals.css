@@ -619,6 +619,77 @@ main.container-fluid.py-4 {
   .d-flex.flex-wrap.gap-2 {
     flex-direction: row !important;
   }
+
+  /* Payment period configuration */
+  .form-control-sm {
+    font-size: 0.875rem !important;
+  }
+
+  input[type="number"].form-control-sm {
+    width: 50px !important;
+  }
+}
+
+/* Period input styling */
+.period-input-wrapper {
+  background: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(220, 53, 69, 0.2);
+}
+
+.period-input {
+  width: 60px !important;
+  border: 2px solid #dc3545 !important;
+  font-size: 1rem !important;
+  background: white !important;
+  color: #000 !important;
+}
+
+.period-input:focus {
+  background: white !important;
+  color: #000 !important;
+  border-color: #dc3545 !important;
+  box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+}
+
+.period-label {
+  min-width: fit-content;
+  color: #000 !important;
+}
+
+/* Remove spinner buttons from number inputs */
+.period-input::-webkit-inner-spin-button,
+.period-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.period-input {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Dark mode support for period inputs */
+[data-theme="dark"] .period-input-wrapper {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(220, 53, 69, 0.4);
+}
+
+[data-theme="dark"] .period-input {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #000 !important;
+  border-color: #dc3545 !important;
+}
+
+[data-theme="dark"] .period-input:focus {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #000 !important;
+  border-color: #dc3545 !important;
+}
+
+[data-theme="dark"] .period-label {
+  color: var(--foreground) !important;
 }
 
 input[type="number"]::-webkit-inner-spin-button,

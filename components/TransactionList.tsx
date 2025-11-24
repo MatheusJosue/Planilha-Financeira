@@ -31,6 +31,10 @@ interface TransactionListProps {
   onDuplicate?: (transaction: Transaction) => void;
   showPredicted?: boolean;
   typeFilter?: "income" | "expense";
+  periodFilter?: {
+    startDay: number;
+    endDay: number;
+  };
 }
 
 interface SortableRowProps {
@@ -188,8 +192,10 @@ export function TransactionList({
   onDuplicate,
   showPredicted = false,
   typeFilter,
+  periodFilter,
 }: TransactionListProps) {
-  const { transactions, deleteTransaction, categories } = useFinanceStore();
+  const { monthsData, currentMonth, deleteTransaction, categories } =
+    useFinanceStore();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<"all" | "income" | "expense">(
     "all"
@@ -197,6 +203,10 @@ export function TransactionList({
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterMonth, setFilterMonth] = useState("all");
   const [localOrder, setLocalOrder] = useState<string[]>([]);
+
+  // Pegar transações do mês atual
+  const monthData = monthsData[currentMonth];
+  const transactions = monthData?.transactions || [];
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -216,8 +226,26 @@ export function TransactionList({
     if (showPredicted && !isPredicted) return false;
     if (!showPredicted && isPredicted) return false;
 
-    // Aplicar filtro de tipo se fornecido
     if (typeFilter && t.type !== typeFilter) return false;
+
+    if (periodFilter) {
+      const dayOfMonth = parseInt(t.date.split("-")[2], 10);
+      if (periodFilter.endDay < periodFilter.startDay) {
+        if (
+          dayOfMonth < periodFilter.startDay &&
+          dayOfMonth > periodFilter.endDay
+        ) {
+          return false;
+        }
+      } else {
+        if (
+          dayOfMonth < periodFilter.startDay ||
+          dayOfMonth > periodFilter.endDay
+        ) {
+          return false;
+        }
+      }
+    }
 
     const matchesSearch = t.description
       .toLowerCase()

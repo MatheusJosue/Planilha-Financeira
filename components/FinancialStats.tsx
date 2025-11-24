@@ -51,8 +51,8 @@ export function FinancialStats() {
       description: `Total de ${totalIncomeCount} receita${
         totalIncomeCount !== 1 ? "s" : ""
       }`,
-      gradient: "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)",
-      bgColor: "rgba(17, 153, 142, 0.1)",
+      gradient: "linear-gradient(135deg, #28a745 0%, #20c997 100%)",
+      bgColor: "rgba(40, 167, 69, 0.1)",
     },
     {
       icon: FiTrendingDown,
@@ -61,24 +61,24 @@ export function FinancialStats() {
       description: `Total de ${totalExpenseCount} despesa${
         totalExpenseCount !== 1 ? "s" : ""
       }`,
-      gradient: "linear-gradient(135deg, #eb3349 0%, #f45c43 100%)",
-      bgColor: "rgba(235, 51, 73, 0.1)",
+      gradient: "linear-gradient(135deg, #dc3545 0%, #c82333 100%)",
+      bgColor: "rgba(220, 53, 69, 0.1)",
     },
     {
       icon: FiTarget,
       title: "Média por Transação",
       value: formatCurrency(avgMonthlyExpense),
       description: "Gasto médio por despesa",
-      gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-      bgColor: "rgba(102, 126, 234, 0.1)",
+      gradient: "linear-gradient(135deg, #6c757d 0%, #495057 100%)",
+      bgColor: "rgba(108, 117, 125, 0.1)",
     },
     {
       icon: FiPieChart,
       title: "Categoria Top",
       value: topExpenseCategory[0],
       description: `${formatCurrency(topExpenseCategory[1] as number)} gastos`,
-      gradient: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
-      bgColor: "rgba(240, 147, 251, 0.1)",
+      gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+      bgColor: "rgba(102, 126, 234, 0.1)",
     },
   ];
 
@@ -170,7 +170,14 @@ export function FinancialStats() {
           <Row className="text-center">
             <Col>
               <div className="mb-1">
-                <Badge bg="secondary" className="px-3 py-2">
+                <Badge
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #6c757d 0%, #495057 100%)",
+                    border: "none",
+                  }}
+                  className="px-3 py-2"
+                >
                   {totalTransactions} Transações
                 </Badge>
               </div>
@@ -178,7 +185,14 @@ export function FinancialStats() {
             </Col>
             <Col>
               <div className="mb-1">
-                <Badge bg="success" className="px-3 py-2">
+                <Badge
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #28a745 0%, #20c997 100%)",
+                    border: "none",
+                  }}
+                  className="px-3 py-2"
+                >
                   {totalIncomeCount} Receitas
                 </Badge>
               </div>
@@ -186,7 +200,14 @@ export function FinancialStats() {
             </Col>
             <Col>
               <div className="mb-1">
-                <Badge bg="danger" className="px-3 py-2">
+                <Badge
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #dc3545 0%, #c82333 100%)",
+                    border: "none",
+                  }}
+                  className="px-3 py-2"
+                >
                   {totalExpenseCount} Despesas
                 </Badge>
               </div>
