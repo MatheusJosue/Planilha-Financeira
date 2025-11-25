@@ -187,10 +187,17 @@ export default function TransactionsPage() {
   const predictedTransactions = currentTransactions.filter(
     (t) => t.is_predicted
   );
-  const predictedIncome = predictedTransactions
+
+  // Para a aba de previsões, incluir transações previstas E transações recorrentes
+  // (as recorrentes já estão em currentTransactions com recurring_id)
+  const allPredictedTransactions = currentTransactions.filter(
+    (t) => t.is_predicted || t.recurring_id
+  );
+
+  const predictedIncome = allPredictedTransactions
     .filter((t) => t.type === "income")
     .reduce((sum, t) => sum + t.value, 0);
-  const predictedExpense = predictedTransactions
+  const predictedExpense = allPredictedTransactions
     .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + t.value, 0);
 
@@ -293,10 +300,10 @@ export default function TransactionsPage() {
     0
   );
 
-  const predictedIncomeTransactions = predictedTransactions.filter(
+  const predictedIncomeTransactions = allPredictedTransactions.filter(
     (t) => t.type === "income"
   );
-  const predictedExpenseTransactions = predictedTransactions.filter(
+  const predictedExpenseTransactions = allPredictedTransactions.filter(
     (t) => t.type === "expense"
   );
 
@@ -1330,109 +1337,6 @@ export default function TransactionsPage() {
             <>
               <div className="mb-4">
                 <h5 className="mb-3 d-flex align-items-center gap-2">
-                  <FiDollarSign className="text-success" />
-                  Receitas Pontuais
-                </h5>
-
-                {periodSeparationEnabled ? (
-                  <>
-                    {/* 1º Período - Receitas Pontuais */}
-                    <Card
-                      className="mb-3"
-                      style={{
-                        borderRadius: "12px",
-                        border: "2px solid rgba(25, 135, 84, 0.2)",
-                      }}
-                    >
-                      <Card.Header
-                        style={{
-                          background:
-                            "linear-gradient(135deg, rgba(25, 135, 84, 0.15) 0%, rgba(40, 167, 69, 0.1) 100%)",
-                          borderBottom: "2px solid rgba(25, 135, 84, 0.2)",
-                          padding: "1rem",
-                        }}
-                      >
-                        <div className="d-flex justify-content-between align-items-center">
-                          <h6 className="mb-0 fw-bold text-success">
-                            📅 1º Período (dias 1 a {period1End})
-                          </h6>
-                          <Badge
-                            bg="success"
-                            style={{
-                              fontSize: "1rem",
-                              padding: "0.5rem 1rem",
-                              borderRadius: "8px",
-                            }}
-                          >
-                            Total: {formatCurrency(totalIncomeTransPeriod1)}
-                          </Badge>
-                        </div>
-                      </Card.Header>
-                      <Card.Body>
-                        <TransactionList
-                          onEdit={handleEdit}
-                          onDuplicate={handleDuplicate}
-                          showPredicted={false}
-                          typeFilter="income"
-                          periodFilter={{ startDay: 1, endDay: period1End }}
-                        />
-                      </Card.Body>
-                    </Card>
-
-                    {/* 2º Período - Receitas Pontuais */}
-                    <Card
-                      style={{
-                        borderRadius: "12px",
-                        border: "2px solid rgba(25, 135, 84, 0.2)",
-                      }}
-                    >
-                      <Card.Header
-                        style={{
-                          background:
-                            "linear-gradient(135deg, rgba(25, 135, 84, 0.15) 0%, rgba(40, 167, 69, 0.1) 100%)",
-                          borderBottom: "2px solid rgba(25, 135, 84, 0.2)",
-                          padding: "1rem",
-                        }}
-                      >
-                        <div className="d-flex justify-content-between align-items-center">
-                          <h6 className="mb-0 fw-bold text-success">
-                            📅 2º Período (dia {period2Start} em diante)
-                          </h6>
-                          <Badge
-                            bg="success"
-                            style={{
-                              fontSize: "1rem",
-                              padding: "0.5rem 1rem",
-                              borderRadius: "8px",
-                            }}
-                          >
-                            Total: {formatCurrency(totalIncomeTransPeriod2)}
-                          </Badge>
-                        </div>
-                      </Card.Header>
-                      <Card.Body>
-                        <TransactionList
-                          onEdit={handleEdit}
-                          onDuplicate={handleDuplicate}
-                          showPredicted={false}
-                          typeFilter="income"
-                          periodFilter={{ startDay: period2Start, endDay: 31 }}
-                        />
-                      </Card.Body>
-                    </Card>
-                  </>
-                ) : (
-                  <TransactionList
-                    onEdit={handleEdit}
-                    onDuplicate={handleDuplicate}
-                    showPredicted={false}
-                    typeFilter="income"
-                  />
-                )}
-              </div>
-
-              <div>
-                <h5 className="mb-3 d-flex align-items-center gap-2">
                   <FiRepeat className="text-success" />
                   Receitas Recorrentes
                 </h5>
@@ -2005,20 +1909,509 @@ export default function TransactionsPage() {
                   </Table>
                 )}
               </div>
+
+              <div>
+                <h5 className="mb-3 d-flex align-items-center gap-2">
+                  <FiDollarSign className="text-success" />
+                  Receitas Pontuais
+                </h5>
+
+                {periodSeparationEnabled ? (
+                  <>
+                    {/* 1º Período - Receitas Pontuais */}
+                    <Card
+                      className="mb-3"
+                      style={{
+                        borderRadius: "12px",
+                        border: "2px solid rgba(25, 135, 84, 0.2)",
+                      }}
+                    >
+                      <Card.Header
+                        style={{
+                          background:
+                            "linear-gradient(135deg, rgba(25, 135, 84, 0.15) 0%, rgba(40, 167, 69, 0.1) 100%)",
+                          borderBottom: "2px solid rgba(25, 135, 84, 0.2)",
+                          padding: "1rem",
+                        }}
+                      >
+                        <div className="d-flex justify-content-between align-items-center">
+                          <h6 className="mb-0 fw-bold text-success">
+                            📅 1º Período (dias 1 a {period1End})
+                          </h6>
+                          <Badge
+                            bg="success"
+                            style={{
+                              fontSize: "1rem",
+                              padding: "0.5rem 1rem",
+                              borderRadius: "8px",
+                            }}
+                          >
+                            Total: {formatCurrency(totalIncomeTransPeriod1)}
+                          </Badge>
+                        </div>
+                      </Card.Header>
+                      <Card.Body>
+                        <TransactionList
+                          onEdit={handleEdit}
+                          onDuplicate={handleDuplicate}
+                          showPredicted={false}
+                          typeFilter="income"
+                          periodFilter={{ startDay: 1, endDay: period1End }}
+                        />
+                      </Card.Body>
+                    </Card>
+
+                    {/* 2º Período - Receitas Pontuais */}
+                    <Card
+                      style={{
+                        borderRadius: "12px",
+                        border: "2px solid rgba(25, 135, 84, 0.2)",
+                      }}
+                    >
+                      <Card.Header
+                        style={{
+                          background:
+                            "linear-gradient(135deg, rgba(25, 135, 84, 0.15) 0%, rgba(40, 167, 69, 0.1) 100%)",
+                          borderBottom: "2px solid rgba(25, 135, 84, 0.2)",
+                          padding: "1rem",
+                        }}
+                      >
+                        <div className="d-flex justify-content-between align-items-center">
+                          <h6 className="mb-0 fw-bold text-success">
+                            📅 2º Período (dia {period2Start} em diante)
+                          </h6>
+                          <Badge
+                            bg="success"
+                            style={{
+                              fontSize: "1rem",
+                              padding: "0.5rem 1rem",
+                              borderRadius: "8px",
+                            }}
+                          >
+                            Total: {formatCurrency(totalIncomeTransPeriod2)}
+                          </Badge>
+                        </div>
+                      </Card.Header>
+                      <Card.Body>
+                        <TransactionList
+                          onEdit={handleEdit}
+                          onDuplicate={handleDuplicate}
+                          showPredicted={false}
+                          typeFilter="income"
+                          periodFilter={{ startDay: period2Start, endDay: 31 }}
+                        />
+                      </Card.Body>
+                    </Card>
+                  </>
+                ) : (
+                  <TransactionList
+                    onEdit={handleEdit}
+                    onDuplicate={handleDuplicate}
+                    showPredicted={false}
+                    typeFilter="income"
+                  />
+                )}
+              </div>
             </>
           )}
 
           {activeTab === "predicted" && (
             <>
-              {predictedTransactions.length === 0 ? (
+              {allPredictedTransactions.length === 0 ? (
                 <div className="text-center py-5">
                   <FiCalendar size={48} className="text-muted mb-3" />
                   <p className="text-muted">
                     Nenhuma transação prevista para este mês
                   </p>
                 </div>
+              ) : periodSeparationEnabled ? (
+                <>
+                  {/* 1º Período - Previsões */}
+                  <Card
+                    className="mb-3"
+                    style={{
+                      borderRadius: "12px",
+                      border: "2px solid rgba(102, 126, 234, 0.3)",
+                      background: "rgba(102, 126, 234, 0.02)",
+                    }}
+                  >
+                    <Card.Header
+                      style={{
+                        background:
+                          "linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.1) 100%)",
+                        borderBottom: "2px solid rgba(102, 126, 234, 0.2)",
+                        padding: "1rem",
+                      }}
+                    >
+                      <h5 className="mb-0 fw-bold" style={{ color: "#667eea" }}>
+                        📅 1º Período (dias 1 a {period1End})
+                      </h5>
+                    </Card.Header>
+                    <Card.Body>
+                      <Row className="g-3 mb-3">
+                        <Col xs={12} md={6}>
+                          <Card
+                            className="text-center h-100"
+                            style={{
+                              borderRadius: "10px",
+                              border: "2px solid rgba(25, 135, 84, 0.3)",
+                              background: "rgba(25, 135, 84, 0.05)",
+                            }}
+                          >
+                            <Card.Body className="py-3">
+                              <div className="d-flex align-items-center justify-content-center gap-2 mb-2">
+                                <FiTrendingUp
+                                  className="text-success"
+                                  size={20}
+                                />
+                                <h6 className="text-success mb-0 fw-semibold">
+                                  Receitas Previstas
+                                </h6>
+                              </div>
+                              <h4 className="text-success mb-1">
+                                {formatCurrency(
+                                  allPredictedTransactions
+                                    .filter(
+                                      (t) =>
+                                        t.type === "income" &&
+                                        parseInt(t.date.split("-")[2]) <=
+                                          period1End
+                                    )
+                                    .reduce((sum, t) => sum + t.value, 0)
+                                )}
+                              </h4>
+                              <small className="text-muted">
+                                {
+                                  allPredictedTransactions.filter(
+                                    (t) =>
+                                      t.type === "income" &&
+                                      parseInt(t.date.split("-")[2]) <=
+                                        period1End
+                                  ).length
+                                }{" "}
+                                transações
+                              </small>
+                            </Card.Body>
+                          </Card>
+                        </Col>
+                        <Col xs={12} md={6}>
+                          <Card
+                            className="text-center h-100"
+                            style={{
+                              borderRadius: "10px",
+                              border: "2px solid rgba(220, 53, 69, 0.3)",
+                              background: "rgba(220, 53, 69, 0.05)",
+                            }}
+                          >
+                            <Card.Body className="py-3">
+                              <div className="d-flex align-items-center justify-content-center gap-2 mb-2">
+                                <FiDollarSign
+                                  className="text-danger"
+                                  size={20}
+                                />
+                                <h6 className="text-danger mb-0 fw-semibold">
+                                  Despesas Previstas
+                                </h6>
+                              </div>
+                              <h4 className="text-danger mb-1">
+                                {formatCurrency(
+                                  allPredictedTransactions
+                                    .filter(
+                                      (t) =>
+                                        t.type === "expense" &&
+                                        parseInt(t.date.split("-")[2]) <=
+                                          period1End
+                                    )
+                                    .reduce((sum, t) => sum + t.value, 0)
+                                )}
+                              </h4>
+                              <small className="text-muted">
+                                {
+                                  allPredictedTransactions.filter(
+                                    (t) =>
+                                      t.type === "expense" &&
+                                      parseInt(t.date.split("-")[2]) <=
+                                        period1End
+                                  ).length
+                                }{" "}
+                                transações
+                              </small>
+                            </Card.Body>
+                          </Card>
+                        </Col>
+                      </Row>
+
+                      {/* Lista de Transações do 1º Período */}
+                      <div className="mt-3">
+                        {allPredictedTransactions.filter(
+                          (t) => parseInt(t.date.split("-")[2]) <= period1End
+                        ).length > 0 ? (
+                          <TransactionList
+                            onEdit={handleEdit}
+                            onDuplicate={handleDuplicate}
+                            showPredicted={true}
+                            periodFilter={{ startDay: 1, endDay: period1End }}
+                          />
+                        ) : (
+                          <div className="text-center py-3 text-muted">
+                            Nenhuma transação prevista neste período
+                          </div>
+                        )}
+                      </div>
+                    </Card.Body>
+                  </Card>
+
+                  {/* 2º Período - Previsões */}
+                  <Card
+                    style={{
+                      borderRadius: "12px",
+                      border: "2px solid rgba(102, 126, 234, 0.3)",
+                      background: "rgba(102, 126, 234, 0.02)",
+                    }}
+                  >
+                    <Card.Header
+                      style={{
+                        background:
+                          "linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.1) 100%)",
+                        borderBottom: "2px solid rgba(102, 126, 234, 0.2)",
+                        padding: "1rem",
+                      }}
+                    >
+                      <h5 className="mb-0 fw-bold" style={{ color: "#667eea" }}>
+                        📅 2º Período (dia {period2Start} em diante)
+                      </h5>
+                    </Card.Header>
+                    <Card.Body>
+                      <Row className="g-3 mb-3">
+                        <Col xs={12} md={6}>
+                          <Card
+                            className="text-center h-100"
+                            style={{
+                              borderRadius: "10px",
+                              border: "2px solid rgba(25, 135, 84, 0.3)",
+                              background: "rgba(25, 135, 84, 0.05)",
+                            }}
+                          >
+                            <Card.Body className="py-3">
+                              <div className="d-flex align-items-center justify-content-center gap-2 mb-2">
+                                <FiTrendingUp
+                                  className="text-success"
+                                  size={20}
+                                />
+                                <h6 className="text-success mb-0 fw-semibold">
+                                  Receitas Previstas
+                                </h6>
+                              </div>
+                              <h4 className="text-success mb-1">
+                                {formatCurrency(
+                                  allPredictedTransactions
+                                    .filter(
+                                      (t) =>
+                                        t.type === "income" &&
+                                        parseInt(t.date.split("-")[2]) >=
+                                          period2Start
+                                    )
+                                    .reduce((sum, t) => sum + t.value, 0)
+                                )}
+                              </h4>
+                              <small className="text-muted">
+                                {
+                                  allPredictedTransactions.filter(
+                                    (t) =>
+                                      t.type === "income" &&
+                                      parseInt(t.date.split("-")[2]) >=
+                                        period2Start
+                                  ).length
+                                }{" "}
+                                transações
+                              </small>
+                            </Card.Body>
+                          </Card>
+                        </Col>
+                        <Col xs={12} md={6}>
+                          <Card
+                            className="text-center h-100"
+                            style={{
+                              borderRadius: "10px",
+                              border: "2px solid rgba(220, 53, 69, 0.3)",
+                              background: "rgba(220, 53, 69, 0.05)",
+                            }}
+                          >
+                            <Card.Body className="py-3">
+                              <div className="d-flex align-items-center justify-content-center gap-2 mb-2">
+                                <FiDollarSign
+                                  className="text-danger"
+                                  size={20}
+                                />
+                                <h6 className="text-danger mb-0 fw-semibold">
+                                  Despesas Previstas
+                                </h6>
+                              </div>
+                              <h4 className="text-danger mb-1">
+                                {formatCurrency(
+                                  allPredictedTransactions
+                                    .filter(
+                                      (t) =>
+                                        t.type === "expense" &&
+                                        parseInt(t.date.split("-")[2]) >=
+                                          period2Start
+                                    )
+                                    .reduce((sum, t) => sum + t.value, 0)
+                                )}
+                              </h4>
+                              <small className="text-muted">
+                                {
+                                  allPredictedTransactions.filter(
+                                    (t) =>
+                                      t.type === "expense" &&
+                                      parseInt(t.date.split("-")[2]) >=
+                                        period2Start
+                                  ).length
+                                }{" "}
+                                transações
+                              </small>
+                            </Card.Body>
+                          </Card>
+                        </Col>
+                      </Row>
+
+                      {/* Lista de Transações do 2º Período */}
+                      <div className="mt-3">
+                        {allPredictedTransactions.filter(
+                          (t) => parseInt(t.date.split("-")[2]) >= period2Start
+                        ).length > 0 ? (
+                          <TransactionList
+                            onEdit={handleEdit}
+                            onDuplicate={handleDuplicate}
+                            showPredicted={true}
+                            periodFilter={{
+                              startDay: period2Start,
+                              endDay: 31,
+                            }}
+                          />
+                        ) : (
+                          <div className="text-center py-3 text-muted">
+                            Nenhuma transação prevista neste período
+                          </div>
+                        )}
+                      </div>
+                    </Card.Body>
+                  </Card>
+                </>
               ) : (
                 <>
+                  {/* Visão Unificada - Sem separação de períodos */}
+                  <Row className="g-3 mb-4">
+                    <Col xs={12} md={4}>
+                      <Card
+                        className="text-center h-100 shadow-sm"
+                        style={{
+                          borderRadius: "12px",
+                          border: "2px solid rgba(25, 135, 84, 0.3)",
+                          background: "rgba(25, 135, 84, 0.05)",
+                        }}
+                      >
+                        <Card.Body className="py-4">
+                          <div className="d-flex align-items-center justify-content-center gap-2 mb-3">
+                            <FiTrendingUp className="text-success" size={24} />
+                            <h5 className="text-success mb-0 fw-bold">
+                              Receitas Previstas
+                            </h5>
+                          </div>
+                          <h2 className="text-success mb-2">
+                            {formatCurrency(predictedIncome)}
+                          </h2>
+                          <Badge
+                            bg="success"
+                            style={{
+                              borderRadius: "8px",
+                              padding: "6px 12px",
+                              fontSize: "0.9rem",
+                            }}
+                          >
+                            {predictedIncomeTransactions.length} transações
+                          </Badge>
+                        </Card.Body>
+                      </Card>
+                    </Col>
+                    <Col xs={12} md={4}>
+                      <Card
+                        className="text-center h-100 shadow-sm"
+                        style={{
+                          borderRadius: "12px",
+                          border: "2px solid rgba(220, 53, 69, 0.3)",
+                          background: "rgba(220, 53, 69, 0.05)",
+                        }}
+                      >
+                        <Card.Body className="py-4">
+                          <div className="d-flex align-items-center justify-content-center gap-2 mb-3">
+                            <FiDollarSign className="text-danger" size={24} />
+                            <h5 className="text-danger mb-0 fw-bold">
+                              Despesas Previstas
+                            </h5>
+                          </div>
+                          <h2 className="text-danger mb-2">
+                            {formatCurrency(predictedExpense)}
+                          </h2>
+                          <Badge
+                            bg="danger"
+                            style={{
+                              borderRadius: "8px",
+                              padding: "6px 12px",
+                              fontSize: "0.9rem",
+                            }}
+                          >
+                            {predictedExpenseTransactions.length} transações
+                          </Badge>
+                        </Card.Body>
+                      </Card>
+                    </Col>
+                    <Col xs={12} md={4}>
+                      <Card
+                        className="text-center h-100 shadow-sm"
+                        style={{
+                          borderRadius: "12px",
+                          border: "2px solid rgba(102, 126, 234, 0.3)",
+                          background: "rgba(102, 126, 234, 0.05)",
+                        }}
+                      >
+                        <Card.Body className="py-4">
+                          <div className="d-flex align-items-center justify-content-center gap-2 mb-3">
+                            <FiCalendar className="text-primary" size={24} />
+                            <h5 className="text-primary mb-0 fw-bold">
+                              Saldo Previsto
+                            </h5>
+                          </div>
+                          <h2
+                            className={`mb-2 ${
+                              predictedIncome - predictedExpense >= 0
+                                ? "text-success"
+                                : "text-danger"
+                            }`}
+                          >
+                            {formatCurrency(predictedIncome - predictedExpense)}
+                          </h2>
+                          <Badge
+                            bg={
+                              predictedIncome - predictedExpense >= 0
+                                ? "success"
+                                : "danger"
+                            }
+                            style={{
+                              borderRadius: "8px",
+                              padding: "6px 12px",
+                              fontSize: "0.9rem",
+                            }}
+                          >
+                            {predictedIncome - predictedExpense >= 0
+                              ? "Positivo"
+                              : "Negativo"}
+                          </Badge>
+                        </Card.Body>
+                      </Card>
+                    </Col>
+                  </Row>
+
                   {/* Seção de Receitas Previstas */}
                   {predictedIncomeTransactions.length > 0 && (
                     <div className="mb-4">
