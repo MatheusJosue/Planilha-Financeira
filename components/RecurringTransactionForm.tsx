@@ -11,12 +11,14 @@ interface RecurringTransactionFormProps {
   show: boolean;
   onHide: () => void;
   transaction?: RecurringTransaction;
+  defaultType?: TransactionType;
 }
 
 export default function RecurringTransactionForm({
   show,
   onHide,
   transaction,
+  defaultType = "expense",
 }: RecurringTransactionFormProps) {
   const { categories, addRecurringTransaction, updateRecurringTransaction } =
     useFinanceStore();
@@ -25,7 +27,7 @@ export default function RecurringTransactionForm({
     if (transaction) {
       return {
         description: transaction.description,
-        type: "expense" as TransactionType,
+        type: transaction.type,
         category: transaction.category,
         value: transaction.value.toString(),
         recurrence_type: transaction.recurrence_type,
@@ -38,7 +40,7 @@ export default function RecurringTransactionForm({
     }
     return {
       description: "",
-      type: "expense" as TransactionType,
+      type: defaultType,
       category: categories[0] || "",
       value: "",
       recurrence_type: "fixed" as RecurrenceType,
@@ -92,12 +94,17 @@ export default function RecurringTransactionForm({
     onHide();
   };
 
+  const isIncome = formData.type === "income";
+  const gradientColors = isIncome
+    ? "linear-gradient(135deg, #198754 0%, #20c997 100%)"
+    : "linear-gradient(135deg, #dc3545 0%, #d63384 100%)";
+
   return (
     <Modal show={show} onHide={onHide} size="lg" centered>
       <Modal.Header
         closeButton
         style={{
-          background: "linear-gradient(135deg, #dc3545 0%, #d63384 100%)",
+          background: gradientColors,
           color: "#fff",
           borderBottom: "none",
         }}
@@ -369,7 +376,7 @@ export default function RecurringTransactionForm({
           style={{
             backgroundColor: "var(--card-bg)",
             borderTop: "2px solid",
-            borderImage: "linear-gradient(135deg, #dc3545 0%, #d63384 100%) 1",
+            borderImage: `${gradientColors} 1`,
             padding: "1rem 2rem",
           }}
         >
@@ -386,7 +393,7 @@ export default function RecurringTransactionForm({
           <Button
             type="submit"
             style={{
-              background: "linear-gradient(135deg, #dc3545 0%, #d63384 100%)",
+              background: gradientColors,
               border: "none",
               borderRadius: "8px",
               padding: "0.5rem 1.5rem",

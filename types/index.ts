@@ -15,6 +15,8 @@ export interface Transaction {
   recurring_id?: string;
   is_predicted?: boolean;
   is_paid?: boolean;
+  current_installment?: number;
+  total_installments?: number;
 }
 
 export interface RecurringTransaction {

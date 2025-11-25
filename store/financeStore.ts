@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { Transaction, FinanceData, DEFAULT_CATEGORIES, RecurringTransaction } from "@/types";
 import { createClient } from "@/lib/supabase-client";
-import { showError, showSuccess } from "@/lib/sweetalert";
+import { showError, showSuccess, showErrorToast, showSuccessToast } from "@/lib/sweetalert";
 
 interface MonthData {
   transactions: Transaction[];
@@ -226,6 +226,8 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
             date: t.date,
             recurring_id: t.recurring_id,
             is_predicted: false,
+            current_installment: t.current_installment,
+            total_installments: t.total_installments,
           });
         });
       }
@@ -235,12 +237,33 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
         if (!monthsData[month]) {
           monthsData[month] = { transactions: [] };
         }
-        const hasRealTransaction = monthsData[month].transactions.some(
-          existing => existing.recurring_id === t.recurring_id && !existing.is_predicted
-        );
+        
+        // Check if a real transaction already exists for this predicted transaction
+        const hasRealTransaction = monthsData[month].transactions.some(existing => {
+          // Must not be predicted
+          if (existing.is_predicted) return false;
+          
+          // If no recurring_id, it's not from recurring transactions, so don't filter
+          if (!t.recurring_id) return false;
+          
+          // Must have the same recurring_id
+          if (existing.recurring_id !== t.recurring_id) return false;
+          
+          // Must be in the same month
+          if (existing.date.substring(0, 7) !== t.date.substring(0, 7)) return false;
+          
+          // For installments, also check the installment number
+          if (t.current_installment && t.total_installments) {
+            return existing.current_installment === t.current_installment &&
+                   existing.total_installments === t.total_installments;
+          }
+          
+          // For regular recurring transactions, matching recurring_id and same month is enough
+          return true;
+        });
+        
         if (!hasRealTransaction) {
           monthsData[month].transactions.push(t);
-        } else {
         }
       });
 
@@ -381,31 +404,44 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       return;
     }
 
+    // Save current month before reload
+    const currentMonthBeforeReload = get().currentMonth;
+
     const month = (edits.date || predictedTransaction.date).substring(0, 7);
+    
+    const transactionData = {
+      description: edits.description || predictedTransaction.description,
+      type: edits.type || predictedTransaction.type,
+      category: edits.category || predictedTransaction.category,
+      value: edits.value !== undefined ? edits.value : predictedTransaction.value,
+      date: edits.date || predictedTransaction.date,
+      month: month,
+      user_id: user.id,
+      recurring_id: predictedTransaction.recurring_id || null,
+      current_installment: predictedTransaction.current_installment || null,
+      total_installments: predictedTransaction.total_installments || null,
+    };
+    
+    console.log("Converting predicted to real:", transactionData);
+    
     const { data, error } = await supabaseClient
       .from('transactions')
-      .insert([{
-        description: edits.description || predictedTransaction.description,
-        type: edits.type || predictedTransaction.type,
-        category: edits.category || predictedTransaction.category,
-        value: edits.value !== undefined ? edits.value : predictedTransaction.value,
-        date: edits.date || predictedTransaction.date,
-        month: month,
-        user_id: user.id,
-        recurring_id: predictedTransaction.recurring_id,
-      }])
+      .insert([transactionData])
       .select()
       .single();
 
     if (error) {
       console.error("Error converting predicted to real:", error);
-      showError("Erro ao criar transação. Verifique sua conexão.");
+      showErrorToast("Erro ao criar transação");
       return;
     }
 
     if (data) {
-      showSuccess("Transação criada com sucesso!");
+      console.log("Transaction created:", data);
+      showSuccessToast("Transação criada com sucesso!");
       await get().loadFromSupabase();
+      // Restore the month after reload
+      set({ currentMonth: currentMonthBeforeReload });
     }
   },
 
@@ -666,6 +702,9 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       recurringTransactions: [...state.recurringTransactions, data],
     }));
 
+    // Reload data to generate predicted transactions
+    await get().loadFromSupabase();
+
     showSuccess("Transação recorrente criada!");
   },
 
@@ -689,19 +728,35 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       ),
     }));
 
+    // Reload data to update predicted transactions
+    await get().loadFromSupabase();
+
     showSuccess("Transação recorrente atualizada!");
   },
 
   deleteRecurringTransaction: async (id: string) => {
     const supabaseClient = createClient();
 
+    // First, delete all transactions that reference this recurring transaction
+    const { error: transactionsError } = await supabaseClient
+      .from('transactions')
+      .delete()
+      .eq('recurring_id', id);
+
+    if (transactionsError) {
+      console.error("Error deleting related transactions:", transactionsError);
+      showErrorToast("Erro ao deletar transações relacionadas");
+      return;
+    }
+
+    // Then delete the recurring transaction
     const { error } = await supabaseClient
       .from('recurring_transactions')
       .delete()
       .eq('id', id);
 
     if (error) {
-      showError("Erro ao deletar transação recorrente");
+      showErrorToast("Erro ao deletar transação recorrente");
       console.error(error);
       return;
     }
@@ -710,7 +765,10 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       recurringTransactions: state.recurringTransactions.filter((r) => r.id !== id),
     }));
 
-    showSuccess("Transação recorrente deletada!");
+    // Reload data to update UI
+    await get().loadFromSupabase();
+    
+    showSuccessToast("Transação recorrente deletada!");
   },
 
   loadRecurringTransactions: async () => {
@@ -755,19 +813,24 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
         if (recurring.end_date && targetDate > new Date(recurring.end_date)) continue;
 
         if (recurring.recurrence_type === 'installment' && recurring.total_installments) {
-          const monthsSinceStart = Math.floor(
-            (targetDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
-          );
+          const monthsSinceStart = (targetDate.getFullYear() - startDate.getFullYear()) * 12 + 
+                                   (targetDate.getMonth() - startDate.getMonth());
           if (monthsSinceStart >= recurring.total_installments) continue;
         }
 
         const month = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`;
         const dateStr = `${month}-${String(recurring.day_of_month).padStart(2, '0')}`;
 
+        // Calculate current installment number for installment type
+        const currentInstallment = recurring.recurrence_type === 'installment'
+          ? (targetDate.getFullYear() - startDate.getFullYear()) * 12 + 
+            (targetDate.getMonth() - startDate.getMonth()) + 1
+          : undefined;
+
         const predictedTransaction = {
           id: `predicted-${recurring.id}-${month}`,
           description: recurring.recurrence_type === 'installment' 
-            ? `${recurring.description} (${Math.floor((targetDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30)) + 1}/${recurring.total_installments})`
+            ? `${recurring.description} (${currentInstallment}/${recurring.total_installments})`
             : recurring.description,
           type: recurring.type,
           category: recurring.category,
@@ -775,6 +838,8 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
           date: dateStr,
           recurring_id: recurring.id,
           is_predicted: true,
+          current_installment: currentInstallment,
+          total_installments: recurring.total_installments,
         };
         
         predicted.push(predictedTransaction);

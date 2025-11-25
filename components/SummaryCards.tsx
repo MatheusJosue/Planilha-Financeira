@@ -11,7 +11,18 @@ import { useFinanceStore } from "@/store/financeStore";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { useEffect, useState } from "react";
 
-export function SummaryCards() {
+interface SummaryCardsProps {
+  dashboardConfig?: {
+    balance?: boolean;
+    monthlyIncome?: boolean;
+    monthlyExpense?: boolean;
+    periodCards?: boolean;
+    charts?: boolean;
+    recentTransactions?: boolean;
+  };
+}
+
+export function SummaryCards({ dashboardConfig }: SummaryCardsProps) {
   const { recurringTransactions, currentMonth, monthsData } = useFinanceStore();
 
   const [periodSeparationEnabled, setPeriodSeparationEnabled] = useState(false);
@@ -19,15 +30,35 @@ export function SummaryCards() {
   const [period2Start, setPeriod2Start] = useState(16);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedEnabled = localStorage.getItem("periodSeparationEnabled");
-      const saved1 = localStorage.getItem("paymentPeriod1End");
-      const saved2 = localStorage.getItem("paymentPeriod2Start");
-      if (savedEnabled) setPeriodSeparationEnabled(savedEnabled === "true");
-      if (saved1) setPeriod1End(parseInt(saved1));
-      if (saved2) setPeriod2Start(parseInt(saved2));
-    }
+    loadUserSettings();
   }, []);
+
+  const loadUserSettings = async () => {
+    try {
+      const supabaseClient = (
+        await import("@/lib/supabase-client")
+      ).createClient();
+      const {
+        data: { user },
+      } = await supabaseClient.auth.getUser();
+
+      if (!user) return;
+
+      const { data: settings } = await supabaseClient
+        .from("user_settings")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+      if (settings) {
+        setPeriodSeparationEnabled(settings.period_separation_enabled || false);
+        setPeriod1End(settings.period_1_end || 15);
+        setPeriod2Start(settings.period_2_start || 16);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar configurações:", error);
+    }
+  };
 
   const monthData = monthsData[currentMonth];
   const currentTransactions = monthData?.transactions || [];
@@ -105,130 +136,142 @@ export function SummaryCards() {
   return (
     <>
       <Row className="g-4 mb-4">
-        <Col md={4}>
-          <Card
-            className="border-0 shadow-card h-100 animate-fade-in"
-            style={{
-              background: "linear-gradient(135deg, #28a745 0%, #20c997 100%)",
-            }}
-          >
-            <Card.Body className="p-4">
-              <div className="d-flex align-items-center justify-content-between">
-                <div>
-                  <p className="text-white mb-1 small opacity-75 fw-semibold">
-                    RECEITAS TOTAIS
-                  </p>
-                  <h2 className="mb-0 text-white fw-bold">
-                    {formatCurrency(totalIncomeWithRecurring)}
-                  </h2>
-                  <small className="text-white opacity-75">
-                    {
-                      normalTransactions.filter((t) => t.type === "income")
-                        .length
-                    }{" "}
-                    pontuais +{" "}
-                    {activeRecurring.filter((t) => t.type === "income").length}{" "}
-                    recorrentes
-                  </small>
+        {(dashboardConfig?.monthlyIncome ?? true) && (
+          <Col md={4}>
+            <Card
+              className="border-0 shadow-card h-100 animate-fade-in"
+              style={{
+                background: "linear-gradient(135deg, #28a745 0%, #20c997 100%)",
+              }}
+            >
+              <Card.Body className="p-4">
+                <div className="d-flex align-items-center justify-content-between">
+                  <div>
+                    <p className="text-white mb-1 small opacity-75 fw-semibold">
+                      RECEITAS TOTAIS
+                    </p>
+                    <h2 className="mb-0 text-white fw-bold">
+                      {formatCurrency(totalIncomeWithRecurring)}
+                    </h2>
+                    <small className="text-white opacity-75">
+                      {
+                        normalTransactions.filter((t) => t.type === "income")
+                          .length
+                      }{" "}
+                      pontuais +{" "}
+                      {
+                        activeRecurring.filter((t) => t.type === "income")
+                          .length
+                      }{" "}
+                      recorrentes
+                    </small>
+                  </div>
+                  <div
+                    className="rounded-circle d-flex align-items-center justify-content-center"
+                    style={{
+                      width: "70px",
+                      height: "70px",
+                      background: "rgba(255, 255, 255, 0.2)",
+                      backdropFilter: "blur(10px)",
+                    }}
+                  >
+                    <FiTrendingUp size={32} className="text-white" />
+                  </div>
                 </div>
-                <div
-                  className="rounded-circle d-flex align-items-center justify-content-center"
-                  style={{
-                    width: "70px",
-                    height: "70px",
-                    background: "rgba(255, 255, 255, 0.2)",
-                    backdropFilter: "blur(10px)",
-                  }}
-                >
-                  <FiTrendingUp size={32} className="text-white" />
-                </div>
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
+              </Card.Body>
+            </Card>
+          </Col>
+        )}
 
-        <Col md={4}>
-          <Card
-            className="border-0 shadow-card h-100 animate-fade-in"
-            style={{
-              background: "linear-gradient(135deg, #dc3545 0%, #c82333 100%)",
-              animationDelay: "0.1s",
-            }}
-          >
-            <Card.Body className="p-4">
-              <div className="d-flex align-items-center justify-content-between">
-                <div>
-                  <p className="text-white mb-1 small opacity-75 fw-semibold">
-                    DESPESAS TOTAIS
-                  </p>
-                  <h2 className="mb-0 text-white fw-bold">
-                    {formatCurrency(totalExpenseWithRecurring)}
-                  </h2>
-                  <small className="text-white opacity-75">
-                    {
-                      normalTransactions.filter((t) => t.type === "expense")
-                        .length
-                    }{" "}
-                    pontuais +{" "}
-                    {activeRecurring.filter((t) => t.type === "expense").length}{" "}
-                    recorrentes
-                  </small>
+        {(dashboardConfig?.monthlyExpense ?? true) && (
+          <Col md={4}>
+            <Card
+              className="border-0 shadow-card h-100 animate-fade-in"
+              style={{
+                background: "linear-gradient(135deg, #dc3545 0%, #c82333 100%)",
+                animationDelay: "0.1s",
+              }}
+            >
+              <Card.Body className="p-4">
+                <div className="d-flex align-items-center justify-content-between">
+                  <div>
+                    <p className="text-white mb-1 small opacity-75 fw-semibold">
+                      DESPESAS TOTAIS
+                    </p>
+                    <h2 className="mb-0 text-white fw-bold">
+                      {formatCurrency(totalExpenseWithRecurring)}
+                    </h2>
+                    <small className="text-white opacity-75">
+                      {
+                        normalTransactions.filter((t) => t.type === "expense")
+                          .length
+                      }{" "}
+                      pontuais +{" "}
+                      {
+                        activeRecurring.filter((t) => t.type === "expense")
+                          .length
+                      }{" "}
+                      recorrentes
+                    </small>
+                  </div>
+                  <div
+                    className="rounded-circle d-flex align-items-center justify-content-center"
+                    style={{
+                      width: "70px",
+                      height: "70px",
+                      background: "rgba(255, 255, 255, 0.2)",
+                      backdropFilter: "blur(10px)",
+                    }}
+                  >
+                    <FiTrendingDown size={32} className="text-white" />
+                  </div>
                 </div>
-                <div
-                  className="rounded-circle d-flex align-items-center justify-content-center"
-                  style={{
-                    width: "70px",
-                    height: "70px",
-                    background: "rgba(255, 255, 255, 0.2)",
-                    backdropFilter: "blur(10px)",
-                  }}
-                >
-                  <FiTrendingDown size={32} className="text-white" />
-                </div>
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
+              </Card.Body>
+            </Card>
+          </Col>
+        )}
 
-        <Col md={4}>
-          <Card
-            className="border-0 shadow-card h-100 animate-fade-in"
-            style={{
-              background:
-                balance >= 0
-                  ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-                  : "linear-gradient(135deg, #6c757d 0%, #495057 100%)",
-              animationDelay: "0.2s",
-            }}
-          >
-            <Card.Body className="p-4">
-              <div className="d-flex align-items-center justify-content-between">
-                <div>
-                  <p className="text-white mb-1 small opacity-75 fw-semibold">
-                    SALDO DO MÊS
-                  </p>
-                  <h2 className="mb-0 text-white fw-bold">
-                    {formatCurrency(balance)}
-                  </h2>
-                  <small className="text-white opacity-75">
-                    {balance >= 0 ? "Positivo ✓" : "Negativo ⚠"}
-                  </small>
+        {(dashboardConfig?.balance ?? true) && (
+          <Col md={4}>
+            <Card
+              className="border-0 shadow-card h-100 animate-fade-in"
+              style={{
+                background:
+                  balance >= 0
+                    ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+                    : "linear-gradient(135deg, #6c757d 0%, #495057 100%)",
+                animationDelay: "0.2s",
+              }}
+            >
+              <Card.Body className="p-4">
+                <div className="d-flex align-items-center justify-content-between">
+                  <div>
+                    <p className="text-white mb-1 small opacity-75 fw-semibold">
+                      SALDO DO MÊS
+                    </p>
+                    <h2 className="mb-0 text-white fw-bold">
+                      {formatCurrency(balance)}
+                    </h2>
+                    <small className="text-white opacity-75">
+                      {balance >= 0 ? "Positivo ✓" : "Negativo ⚠"}
+                    </small>
+                  </div>
+                  <div
+                    className="rounded-circle d-flex align-items-center justify-content-center"
+                    style={{
+                      width: "70px",
+                      height: "70px",
+                      background: "rgba(255, 255, 255, 0.2)",
+                      backdropFilter: "blur(10px)",
+                    }}
+                  >
+                    <FiDollarSign size={32} className="text-white" />
+                  </div>
                 </div>
-                <div
-                  className="rounded-circle d-flex align-items-center justify-content-center"
-                  style={{
-                    width: "70px",
-                    height: "70px",
-                    background: "rgba(255, 255, 255, 0.2)",
-                    backdropFilter: "blur(10px)",
-                  }}
-                >
-                  <FiDollarSign size={32} className="text-white" />
-                </div>
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
+              </Card.Body>
+            </Card>
+          </Col>
+        )}
       </Row>
 
       {/* Cards de Períodos - apenas se ativado */}

@@ -1,11 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Card, Row, Col, Nav, Badge, Table } from "react-bootstrap";
+import { Button, Card, Row, Col, Nav, Badge } from "react-bootstrap";
 import {
   FiPlus,
-  FiEdit2,
-  FiTrash2,
   FiRepeat,
   FiDollarSign,
   FiTrendingUp,
@@ -16,13 +14,14 @@ import { TransactionForm } from "@/components/TransactionForm";
 import { TransactionList } from "@/components/TransactionList";
 import { MonthSelector } from "@/components/MonthSelector";
 import RecurringTransactionForm from "@/components/RecurringTransactionForm";
+import { ConfirmRecurringModal } from "@/components/ConfirmRecurringModal";
 import { useFinanceStore } from "@/store/financeStore";
 import { formatCurrency } from "@/utils/formatCurrency";
 
 type TabType = "transactions" | "income" | "predicted";
 
 export default function TransactionsPage() {
-  const [activeTab, setActiveTab] = useState<TabType>("transactions");
+  const [activeTab, setActiveTab] = useState<TabType>("predicted");
   const [showForm, setShowForm] = useState(false);
   const [showRecurringForm, setShowRecurringForm] = useState(false);
   const [defaultTransactionType, setDefaultTransactionType] = useState<
@@ -35,28 +34,54 @@ export default function TransactionsPage() {
   const [editingRecurring, setEditingRecurring] = useState<
     RecurringTransaction | undefined
   >(undefined);
+  const [confirmingTransaction, setConfirmingTransaction] =
+    useState<Transaction | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const [periodSeparationEnabled, setPeriodSeparationEnabled] = useState(false);
   const [period1End, setPeriod1End] = useState(15);
   const [period2Start, setPeriod2Start] = useState(16);
-  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
-    const savedEnabled = localStorage.getItem("periodSeparationEnabled");
-    const saved1 = localStorage.getItem("paymentPeriod1End");
-    const saved2 = localStorage.getItem("paymentPeriod2Start");
-
-    if (savedEnabled) setPeriodSeparationEnabled(savedEnabled === "true");
-    if (saved1) setPeriod1End(parseInt(saved1));
-    if (saved2) setPeriod2Start(parseInt(saved2));
-
-    setIsHydrated(true);
+    loadUserSettings();
   }, []);
+
+  const loadUserSettings = async () => {
+    try {
+      const supabaseClient = (
+        await import("@/lib/supabase-client")
+      ).createClient();
+      const {
+        data: { user },
+      } = await supabaseClient.auth.getUser();
+
+      if (!user) return;
+
+      const { data: settings, error } = await supabaseClient
+        .from("user_settings")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+      if (error && error.code !== "PGRST116") {
+        console.error("Erro ao carregar configurações:", error);
+        return;
+      }
+
+      if (settings) {
+        setPeriodSeparationEnabled(settings.period_separation_enabled || false);
+        setPeriod1End(settings.period_1_end || 15);
+        setPeriod2Start(settings.period_2_start || 16);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar configurações:", error);
+    }
+  };
 
   const {
     recurringTransactions,
     loadRecurringTransactions,
-    deleteRecurringTransaction,
+    convertPredictedToReal,
     monthsData,
     currentMonth,
   } = useFinanceStore();
@@ -64,17 +89,6 @@ export default function TransactionsPage() {
   useEffect(() => {
     loadRecurringTransactions();
   }, [loadRecurringTransactions]);
-
-  useEffect(() => {
-    if (isHydrated) {
-      localStorage.setItem(
-        "periodSeparationEnabled",
-        periodSeparationEnabled.toString()
-      );
-      localStorage.setItem("paymentPeriod1End", period1End.toString());
-      localStorage.setItem("paymentPeriod2Start", period2Start.toString());
-    }
-  }, [isHydrated, periodSeparationEnabled, period1End, period2Start]);
 
   const handleEdit = (transaction: Transaction) => {
     setEditingTransaction(transaction);
@@ -110,6 +124,20 @@ export default function TransactionsPage() {
     setShowForm(true);
   };
 
+  const handleConfirmRecurring = (transaction: Transaction) => {
+    setConfirmingTransaction(transaction);
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmWithValue = async (
+    transaction: Transaction,
+    newValue: number
+  ) => {
+    await convertPredictedToReal(transaction, { value: newValue });
+    setShowConfirmModal(false);
+    setConfirmingTransaction(null);
+  };
+
   const handleCloseForm = () => {
     setShowForm(false);
     setEditingTransaction(null);
@@ -117,51 +145,9 @@ export default function TransactionsPage() {
     setDefaultTransactionType(undefined);
   };
 
-  const handleEditRecurring = (transaction: RecurringTransaction) => {
-    setEditingRecurring(transaction);
-    setShowRecurringForm(true);
-  };
-
-  const handleDeleteRecurring = async (id: string) => {
-    if (confirm("Tem certeza que deseja excluir esta transação recorrente?")) {
-      await deleteRecurringTransaction(id);
-    }
-  };
-
   const handleCloseRecurringForm = () => {
     setShowRecurringForm(false);
     setEditingRecurring(undefined);
-  };
-
-  const getRecurrenceLabel = (transaction: RecurringTransaction) => {
-    switch (transaction.recurrence_type) {
-      case "fixed":
-        return "Fixa Mensal";
-      case "installment":
-        return `Parcelada ${transaction.current_installment || 1}/${
-          transaction.total_installments
-        }`;
-      case "variable":
-        return "Variável Mensal";
-    }
-  };
-
-  const getCategoryColor = (category: string) => {
-    const colors: { [key: string]: string } = {
-      Alimentação: "#fd7e14",
-      Transporte: "#0dcaf0",
-      Moradia: "#6f42c1",
-      Saúde: "#d63384",
-      Educação: "#0d6efd",
-      Lazer: "#ffc107",
-      Vestuário: "#20c997",
-      Outros: "#6c757d",
-      Investimentos: "#198754",
-      Salário: "#28a745",
-      Freelance: "#17a2b8",
-      Presente: "#e83e8c",
-    };
-    return colors[category] || "#6c757d";
   };
 
   const activeRecurring = recurringTransactions.filter((t) => t.is_active);
@@ -239,63 +225,6 @@ export default function TransactionsPage() {
     0
   );
   const totalIncomeTransPeriod2 = incomeTransactionsPeriod2.reduce(
-    (sum, t) => sum + t.value,
-    0
-  );
-
-  const incomeRecurring = activeRecurring.filter((t) => t.type === "income");
-  const totalIncomeWithRecurring = currentIncomes + totalMonthlyIncome;
-
-  const expenseRecurring = activeRecurring.filter((t) => t.type === "expense");
-  const totalExpenseWithRecurring = currentExpenses + totalMonthlyExpense;
-
-  const sortedExpenseRecurring = [...expenseRecurring].sort((a, b) => {
-    if (a.day_of_month !== b.day_of_month) {
-      return a.day_of_month - b.day_of_month;
-    }
-
-    const typeOrder: { [key: string]: number } = {
-      fixed: 1,
-      installment: 2,
-      variable: 3,
-    };
-
-    return (
-      (typeOrder[a.recurrence_type] || 3) - (typeOrder[b.recurrence_type] || 3)
-    );
-  });
-
-  const expenseRecurringPeriod1 = sortedExpenseRecurring.filter(
-    (t) => t.day_of_month <= period1End
-  );
-  const expenseRecurringPeriod2 = sortedExpenseRecurring.filter(
-    (t) => t.day_of_month >= period2Start
-  );
-
-  const totalExpensePeriod1 = expenseRecurringPeriod1.reduce(
-    (sum, t) => sum + t.value,
-    0
-  );
-  const totalExpensePeriod2 = expenseRecurringPeriod2.reduce(
-    (sum, t) => sum + t.value,
-    0
-  );
-
-  const sortedIncomeRecurring = [...incomeRecurring].sort(
-    (a, b) => a.day_of_month - b.day_of_month
-  );
-  const incomeRecurringPeriod1 = sortedIncomeRecurring.filter(
-    (t) => t.day_of_month <= period1End
-  );
-  const incomeRecurringPeriod2 = sortedIncomeRecurring.filter(
-    (t) => t.day_of_month >= period2Start
-  );
-
-  const totalIncomePeriod1 = incomeRecurringPeriod1.reduce(
-    (sum, t) => sum + t.value,
-    0
-  );
-  const totalIncomePeriod2 = incomeRecurringPeriod2.reduce(
     (sum, t) => sum + t.value,
     0
   );
@@ -387,7 +316,8 @@ export default function TransactionsPage() {
                     {formatCurrency(totalMonthlyExpense)}
                   </h3>
                   <small className="text-muted">
-                    {expenseRecurring.length} contas mensais
+                    {activeRecurring.filter((t) => t.type === "expense").length}{" "}
+                    contas mensais
                   </small>
                 </Card.Body>
               </Card>
@@ -403,7 +333,7 @@ export default function TransactionsPage() {
                     <h6 className="text-muted mb-0">Total do Mês</h6>
                   </div>
                   <h3 className="text-warning mb-0">
-                    {formatCurrency(totalExpenseWithRecurring)}
+                    {formatCurrency(currentExpenses + totalMonthlyExpense)}
                   </h3>
                   <small className="text-muted">Despesas totais</small>
                 </Card.Body>
@@ -425,7 +355,7 @@ export default function TransactionsPage() {
                     <h6 className="text-muted mb-0">Total de Receitas</h6>
                   </div>
                   <h3 className="text-success mb-0">
-                    {formatCurrency(totalIncomeWithRecurring)}
+                    {formatCurrency(currentIncomes + totalMonthlyIncome)}
                   </h3>
                   <small className="text-muted">Transações + Recorrentes</small>
                 </Card.Body>
@@ -464,7 +394,8 @@ export default function TransactionsPage() {
                     {formatCurrency(totalMonthlyIncome)}
                   </h3>
                   <small className="text-muted">
-                    {incomeRecurring.length} recorrentes
+                    {activeRecurring.filter((t) => t.type === "income").length}{" "}
+                    recorrentes
                   </small>
                 </Card.Body>
               </Card>
@@ -674,6 +605,7 @@ export default function TransactionsPage() {
                         <TransactionList
                           onEdit={handleEdit}
                           onDuplicate={handleDuplicate}
+                          onConfirmRecurring={handleConfirmRecurring}
                           showPredicted={false}
                           typeFilter="expense"
                           periodFilter={{ startDay: 1, endDay: period1End }}
@@ -716,6 +648,7 @@ export default function TransactionsPage() {
                         <TransactionList
                           onEdit={handleEdit}
                           onDuplicate={handleDuplicate}
+                          onConfirmRecurring={handleConfirmRecurring}
                           showPredicted={false}
                           typeFilter="expense"
                           periodFilter={{ startDay: period2Start, endDay: 31 }}
@@ -732,1184 +665,11 @@ export default function TransactionsPage() {
                   />
                 )}
               </div>
-
-              <div>
-                <h5 className="mb-3 d-flex align-items-center gap-2">
-                  <FiRepeat className="text-danger" />
-                  Contas Recorrentes
-                </h5>
-                {expenseRecurring.length === 0 ? (
-                  <div className="text-center py-4 bg-light rounded">
-                    <p className="text-muted mb-2">
-                      Nenhuma conta recorrente cadastrada
-                    </p>
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={() => setShowRecurringForm(true)}
-                      style={{ borderRadius: "8px" }}
-                    >
-                      Adicionar Conta Recorrente
-                    </Button>
-                  </div>
-                ) : periodSeparationEnabled ? (
-                  <>
-                    {/* 1º Período */}
-                    <Card
-                      className="mb-3"
-                      style={{
-                        borderRadius: "12px",
-                        border: "2px solid rgba(220, 53, 69, 0.2)",
-                      }}
-                    >
-                      <Card.Header
-                        style={{
-                          background:
-                            "linear-gradient(135deg, rgba(220, 53, 69, 0.15) 0%, rgba(214, 51, 132, 0.1) 100%)",
-                          borderBottom: "2px solid rgba(220, 53, 69, 0.2)",
-                          padding: "1rem",
-                        }}
-                      >
-                        <div className="d-flex justify-content-between align-items-center">
-                          <h6 className="mb-0 fw-bold text-danger">
-                            📅 1º Período (dias 1 a {period1End})
-                          </h6>
-                          <Badge
-                            bg="danger"
-                            style={{
-                              fontSize: "1rem",
-                              padding: "0.5rem 1rem",
-                              borderRadius: "8px",
-                            }}
-                          >
-                            Total: {formatCurrency(totalExpensePeriod1)}
-                          </Badge>
-                        </div>
-                      </Card.Header>
-                      <Card.Body className="p-0">
-                        {expenseRecurringPeriod1.length === 0 ? (
-                          <div className="text-center py-3 text-muted">
-                            Nenhuma conta neste período
-                          </div>
-                        ) : (
-                          <Table hover responsive className="align-middle mb-0">
-                            <thead
-                              style={{
-                                background: "rgba(220, 53, 69, 0.05)",
-                              }}
-                            >
-                              <tr>
-                                <th
-                                  className="text-center"
-                                  style={{
-                                    padding: "0.75rem",
-                                    fontWeight: "600",
-                                    fontSize: "0.85rem",
-                                  }}
-                                >
-                                  Descrição
-                                </th>
-                                <th
-                                  className="text-center"
-                                  style={{
-                                    padding: "0.75rem",
-                                    fontWeight: "600",
-                                    fontSize: "0.85rem",
-                                  }}
-                                >
-                                  Categoria
-                                </th>
-                                <th
-                                  className="text-center"
-                                  style={{
-                                    padding: "0.75rem",
-                                    fontWeight: "600",
-                                    fontSize: "0.85rem",
-                                  }}
-                                >
-                                  Valor
-                                </th>
-                                <th
-                                  className="text-center"
-                                  style={{
-                                    padding: "0.75rem",
-                                    fontWeight: "600",
-                                    fontSize: "0.85rem",
-                                  }}
-                                >
-                                  Recorrência
-                                </th>
-                                <th
-                                  className="text-center"
-                                  style={{
-                                    padding: "0.75rem",
-                                    fontWeight: "600",
-                                    fontSize: "0.85rem",
-                                  }}
-                                >
-                                  Dia
-                                </th>
-                                <th
-                                  className="text-center"
-                                  style={{
-                                    padding: "0.75rem",
-                                    fontWeight: "600",
-                                    fontSize: "0.85rem",
-                                  }}
-                                >
-                                  Ações
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {expenseRecurringPeriod1.map((transaction) => {
-                                const categoryColor = getCategoryColor(
-                                  transaction.category
-                                );
-                                return (
-                                  <tr key={transaction.id}>
-                                    <td
-                                      className="text-center"
-                                      style={{ padding: "0.75rem" }}
-                                    >
-                                      {transaction.description}
-                                    </td>
-                                    <td
-                                      className="text-center"
-                                      style={{ padding: "0.75rem" }}
-                                    >
-                                      <Badge
-                                        style={{
-                                          backgroundColor: categoryColor,
-                                          borderRadius: "6px",
-                                          padding: "4px 10px",
-                                          fontSize: "0.8rem",
-                                        }}
-                                      >
-                                        {transaction.category}
-                                      </Badge>
-                                    </td>
-                                    <td
-                                      className="text-center"
-                                      style={{ padding: "0.75rem" }}
-                                    >
-                                      <span className="text-danger fw-bold">
-                                        -{formatCurrency(transaction.value)}
-                                      </span>
-                                    </td>
-                                    <td
-                                      className="text-center"
-                                      style={{ padding: "0.75rem" }}
-                                    >
-                                      <Badge
-                                        bg="danger"
-                                        style={{
-                                          borderRadius: "6px",
-                                          fontSize: "0.8rem",
-                                        }}
-                                      >
-                                        {getRecurrenceLabel(transaction)}
-                                      </Badge>
-                                    </td>
-                                    <td
-                                      className="text-center"
-                                      style={{ padding: "0.75rem" }}
-                                    >
-                                      <span className="text-danger fw-semibold">
-                                        Dia {transaction.day_of_month}
-                                      </span>
-                                    </td>
-                                    <td
-                                      className="text-center"
-                                      style={{ padding: "0.75rem" }}
-                                    >
-                                      <Button
-                                        variant="outline-danger"
-                                        size="sm"
-                                        className="me-1"
-                                        onClick={() =>
-                                          handleEditRecurring(transaction)
-                                        }
-                                        style={{
-                                          borderRadius: "6px",
-                                          padding: "4px 8px",
-                                        }}
-                                      >
-                                        <FiEdit2 size={14} />
-                                      </Button>
-                                      <Button
-                                        variant="outline-danger"
-                                        size="sm"
-                                        onClick={() =>
-                                          handleDeleteRecurring(transaction.id)
-                                        }
-                                        style={{
-                                          borderRadius: "6px",
-                                          padding: "4px 8px",
-                                        }}
-                                      >
-                                        <FiTrash2 size={14} />
-                                      </Button>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </Table>
-                        )}
-                      </Card.Body>
-                    </Card>
-
-                    {/* 2º Período */}
-                    <Card
-                      style={{
-                        borderRadius: "12px",
-                        border: "2px solid rgba(220, 53, 69, 0.2)",
-                      }}
-                    >
-                      <Card.Header
-                        style={{
-                          background:
-                            "linear-gradient(135deg, rgba(220, 53, 69, 0.15) 0%, rgba(214, 51, 132, 0.1) 100%)",
-                          borderBottom: "2px solid rgba(220, 53, 69, 0.2)",
-                          padding: "1rem",
-                        }}
-                      >
-                        <div className="d-flex justify-content-between align-items-center">
-                          <h6 className="mb-0 fw-bold text-danger">
-                            📅 2º Período (dia {period2Start} em diante)
-                          </h6>
-                          <Badge
-                            bg="danger"
-                            style={{
-                              fontSize: "1rem",
-                              padding: "0.5rem 1rem",
-                              borderRadius: "8px",
-                            }}
-                          >
-                            Total: {formatCurrency(totalExpensePeriod2)}
-                          </Badge>
-                        </div>
-                      </Card.Header>
-                      <Card.Body className="p-0">
-                        {expenseRecurringPeriod2.length === 0 ? (
-                          <div className="text-center py-3 text-muted">
-                            Nenhuma conta neste período
-                          </div>
-                        ) : (
-                          <Table hover responsive className="align-middle mb-0">
-                            <thead
-                              style={{
-                                background: "rgba(220, 53, 69, 0.05)",
-                              }}
-                            >
-                              <tr>
-                                <th
-                                  className="text-center"
-                                  style={{
-                                    padding: "0.75rem",
-                                    fontWeight: "600",
-                                    fontSize: "0.85rem",
-                                  }}
-                                >
-                                  Descrição
-                                </th>
-                                <th
-                                  className="text-center"
-                                  style={{
-                                    padding: "0.75rem",
-                                    fontWeight: "600",
-                                    fontSize: "0.85rem",
-                                  }}
-                                >
-                                  Categoria
-                                </th>
-                                <th
-                                  className="text-center"
-                                  style={{
-                                    padding: "0.75rem",
-                                    fontWeight: "600",
-                                    fontSize: "0.85rem",
-                                  }}
-                                >
-                                  Valor
-                                </th>
-                                <th
-                                  className="text-center"
-                                  style={{
-                                    padding: "0.75rem",
-                                    fontWeight: "600",
-                                    fontSize: "0.85rem",
-                                  }}
-                                >
-                                  Recorrência
-                                </th>
-                                <th
-                                  className="text-center"
-                                  style={{
-                                    padding: "0.75rem",
-                                    fontWeight: "600",
-                                    fontSize: "0.85rem",
-                                  }}
-                                >
-                                  Dia
-                                </th>
-                                <th
-                                  className="text-center"
-                                  style={{
-                                    padding: "0.75rem",
-                                    fontWeight: "600",
-                                    fontSize: "0.85rem",
-                                  }}
-                                >
-                                  Ações
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {expenseRecurringPeriod2.map((transaction) => {
-                                const categoryColor = getCategoryColor(
-                                  transaction.category
-                                );
-                                return (
-                                  <tr key={transaction.id}>
-                                    <td
-                                      className="text-center"
-                                      style={{ padding: "0.75rem" }}
-                                    >
-                                      {transaction.description}
-                                    </td>
-                                    <td
-                                      className="text-center"
-                                      style={{ padding: "0.75rem" }}
-                                    >
-                                      <Badge
-                                        style={{
-                                          backgroundColor: categoryColor,
-                                          borderRadius: "6px",
-                                          padding: "4px 10px",
-                                          fontSize: "0.8rem",
-                                        }}
-                                      >
-                                        {transaction.category}
-                                      </Badge>
-                                    </td>
-                                    <td
-                                      className="text-center"
-                                      style={{ padding: "0.75rem" }}
-                                    >
-                                      <span className="text-danger fw-bold">
-                                        -{formatCurrency(transaction.value)}
-                                      </span>
-                                    </td>
-                                    <td
-                                      className="text-center"
-                                      style={{ padding: "0.75rem" }}
-                                    >
-                                      <Badge
-                                        bg="danger"
-                                        style={{
-                                          borderRadius: "6px",
-                                          fontSize: "0.8rem",
-                                        }}
-                                      >
-                                        {getRecurrenceLabel(transaction)}
-                                      </Badge>
-                                    </td>
-                                    <td
-                                      className="text-center"
-                                      style={{ padding: "0.75rem" }}
-                                    >
-                                      <span className="text-danger fw-semibold">
-                                        Dia {transaction.day_of_month}
-                                      </span>
-                                    </td>
-                                    <td
-                                      className="text-center"
-                                      style={{ padding: "0.75rem" }}
-                                    >
-                                      <Button
-                                        variant="outline-danger"
-                                        size="sm"
-                                        className="me-1"
-                                        onClick={() =>
-                                          handleEditRecurring(transaction)
-                                        }
-                                        style={{
-                                          borderRadius: "6px",
-                                          padding: "4px 8px",
-                                        }}
-                                      >
-                                        <FiEdit2 size={14} />
-                                      </Button>
-                                      <Button
-                                        variant="outline-danger"
-                                        size="sm"
-                                        onClick={() =>
-                                          handleDeleteRecurring(transaction.id)
-                                        }
-                                        style={{
-                                          borderRadius: "6px",
-                                          padding: "4px 8px",
-                                        }}
-                                      >
-                                        <FiTrash2 size={14} />
-                                      </Button>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </Table>
-                        )}
-                      </Card.Body>
-                    </Card>
-                  </>
-                ) : (
-                  <Table hover responsive className="align-middle mb-0">
-                    <thead
-                      style={{
-                        background: "rgba(220, 53, 69, 0.05)",
-                      }}
-                    >
-                      <tr>
-                        <th
-                          className="text-center"
-                          style={{
-                            padding: "0.75rem",
-                            fontWeight: "600",
-                            fontSize: "0.85rem",
-                          }}
-                        >
-                          Descrição
-                        </th>
-                        <th
-                          className="text-center"
-                          style={{
-                            padding: "0.75rem",
-                            fontWeight: "600",
-                            fontSize: "0.85rem",
-                          }}
-                        >
-                          Categoria
-                        </th>
-                        <th
-                          className="text-center"
-                          style={{
-                            padding: "0.75rem",
-                            fontWeight: "600",
-                            fontSize: "0.85rem",
-                          }}
-                        >
-                          Valor
-                        </th>
-                        <th
-                          className="text-center"
-                          style={{
-                            padding: "0.75rem",
-                            fontWeight: "600",
-                            fontSize: "0.85rem",
-                          }}
-                        >
-                          Recorrência
-                        </th>
-                        <th
-                          className="text-center"
-                          style={{
-                            padding: "0.75rem",
-                            fontWeight: "600",
-                            fontSize: "0.85rem",
-                          }}
-                        >
-                          Dia
-                        </th>
-                        <th
-                          className="text-center"
-                          style={{
-                            padding: "0.75rem",
-                            fontWeight: "600",
-                            fontSize: "0.85rem",
-                          }}
-                        >
-                          Ações
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sortedExpenseRecurring.map((transaction) => {
-                        const categoryColor = getCategoryColor(
-                          transaction.category
-                        );
-                        return (
-                          <tr key={transaction.id}>
-                            <td
-                              className="text-center"
-                              style={{ padding: "0.75rem" }}
-                            >
-                              {transaction.description}
-                            </td>
-                            <td
-                              className="text-center"
-                              style={{ padding: "0.75rem" }}
-                            >
-                              <Badge
-                                style={{
-                                  backgroundColor: categoryColor,
-                                  borderRadius: "6px",
-                                  padding: "4px 10px",
-                                  fontSize: "0.8rem",
-                                }}
-                              >
-                                {transaction.category}
-                              </Badge>
-                            </td>
-                            <td
-                              className="text-center"
-                              style={{ padding: "0.75rem" }}
-                            >
-                              <span className="text-danger fw-bold">
-                                -{formatCurrency(transaction.value)}
-                              </span>
-                            </td>
-                            <td
-                              className="text-center"
-                              style={{ padding: "0.75rem" }}
-                            >
-                              <Badge
-                                bg="danger"
-                                style={{
-                                  borderRadius: "6px",
-                                  fontSize: "0.8rem",
-                                }}
-                              >
-                                {getRecurrenceLabel(transaction)}
-                              </Badge>
-                            </td>
-                            <td
-                              className="text-center"
-                              style={{ padding: "0.75rem" }}
-                            >
-                              <span className="text-danger fw-semibold">
-                                Dia {transaction.day_of_month}
-                              </span>
-                            </td>
-                            <td
-                              className="text-center"
-                              style={{ padding: "0.75rem" }}
-                            >
-                              <Button
-                                variant="outline-danger"
-                                size="sm"
-                                className="me-1"
-                                onClick={() => handleEditRecurring(transaction)}
-                                style={{
-                                  borderRadius: "6px",
-                                  padding: "4px 8px",
-                                }}
-                              >
-                                <FiEdit2 size={14} />
-                              </Button>
-                              <Button
-                                variant="outline-danger"
-                                size="sm"
-                                onClick={() =>
-                                  handleDeleteRecurring(transaction.id)
-                                }
-                                style={{
-                                  borderRadius: "6px",
-                                  padding: "4px 8px",
-                                }}
-                              >
-                                <FiTrash2 size={14} />
-                              </Button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </Table>
-                )}
-              </div>
             </>
           )}
 
           {activeTab === "income" && (
             <>
-              <div className="mb-4">
-                <h5 className="mb-3 d-flex align-items-center gap-2">
-                  <FiRepeat className="text-success" />
-                  Receitas Recorrentes
-                </h5>
-                {incomeRecurring.length === 0 ? (
-                  <div className="text-center py-4 bg-light rounded">
-                    <p className="text-muted mb-2">
-                      Nenhuma receita recorrente cadastrada
-                    </p>
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => setShowRecurringForm(true)}
-                      style={{ borderRadius: "8px" }}
-                    >
-                      Adicionar Receita Recorrente
-                    </Button>
-                  </div>
-                ) : periodSeparationEnabled ? (
-                  <>
-                    {/* 1º Período - Receitas */}
-                    <Card
-                      className="mb-3"
-                      style={{
-                        borderRadius: "12px",
-                        border: "2px solid rgba(25, 135, 84, 0.2)",
-                      }}
-                    >
-                      <Card.Header
-                        style={{
-                          background:
-                            "linear-gradient(135deg, rgba(25, 135, 84, 0.15) 0%, rgba(40, 167, 69, 0.1) 100%)",
-                          borderBottom: "2px solid rgba(25, 135, 84, 0.2)",
-                          padding: "1rem",
-                        }}
-                      >
-                        <div className="d-flex justify-content-between align-items-center">
-                          <h6 className="mb-0 fw-bold text-success">
-                            📅 1º Período (dias 1 a {period1End})
-                          </h6>
-                          <Badge
-                            bg="success"
-                            style={{
-                              fontSize: "1rem",
-                              padding: "0.5rem 1rem",
-                              borderRadius: "8px",
-                            }}
-                          >
-                            Total: {formatCurrency(totalIncomePeriod1)}
-                          </Badge>
-                        </div>
-                      </Card.Header>
-                      <Card.Body className="p-0">
-                        {incomeRecurringPeriod1.length === 0 ? (
-                          <div className="text-center py-3 text-muted">
-                            Nenhuma receita neste período
-                          </div>
-                        ) : (
-                          <Table hover responsive className="align-middle mb-0">
-                            <thead
-                              style={{ background: "rgba(25, 135, 84, 0.05)" }}
-                            >
-                              <tr>
-                                <th
-                                  className="text-center"
-                                  style={{
-                                    padding: "0.75rem",
-                                    fontWeight: "600",
-                                    fontSize: "0.85rem",
-                                  }}
-                                >
-                                  Descrição
-                                </th>
-                                <th
-                                  className="text-center"
-                                  style={{
-                                    padding: "0.75rem",
-                                    fontWeight: "600",
-                                    fontSize: "0.85rem",
-                                  }}
-                                >
-                                  Categoria
-                                </th>
-                                <th
-                                  className="text-center"
-                                  style={{
-                                    padding: "0.75rem",
-                                    fontWeight: "600",
-                                    fontSize: "0.85rem",
-                                  }}
-                                >
-                                  Valor
-                                </th>
-                                <th
-                                  className="text-center"
-                                  style={{
-                                    padding: "0.75rem",
-                                    fontWeight: "600",
-                                    fontSize: "0.85rem",
-                                  }}
-                                >
-                                  Recorrência
-                                </th>
-                                <th
-                                  className="text-center"
-                                  style={{
-                                    padding: "0.75rem",
-                                    fontWeight: "600",
-                                    fontSize: "0.85rem",
-                                  }}
-                                >
-                                  Dia
-                                </th>
-                                <th
-                                  className="text-center"
-                                  style={{
-                                    padding: "0.75rem",
-                                    fontWeight: "600",
-                                    fontSize: "0.85rem",
-                                  }}
-                                >
-                                  Ações
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {incomeRecurringPeriod1.map((transaction) => (
-                                <tr key={transaction.id}>
-                                  <td
-                                    className="text-center"
-                                    style={{ padding: "0.75rem" }}
-                                  >
-                                    {transaction.description}
-                                  </td>
-                                  <td
-                                    className="text-center"
-                                    style={{ padding: "0.75rem" }}
-                                  >
-                                    <Badge
-                                      bg="success"
-                                      style={{
-                                        borderRadius: "6px",
-                                        padding: "4px 10px",
-                                        fontSize: "0.8rem",
-                                      }}
-                                    >
-                                      {transaction.category}
-                                    </Badge>
-                                  </td>
-                                  <td
-                                    className="text-center"
-                                    style={{ padding: "0.75rem" }}
-                                  >
-                                    <span className="text-success fw-bold">
-                                      +{formatCurrency(transaction.value)}
-                                    </span>
-                                  </td>
-                                  <td
-                                    className="text-center"
-                                    style={{ padding: "0.75rem" }}
-                                  >
-                                    <Badge
-                                      bg="success"
-                                      style={{
-                                        borderRadius: "6px",
-                                        fontSize: "0.8rem",
-                                      }}
-                                    >
-                                      {getRecurrenceLabel(transaction)}
-                                    </Badge>
-                                  </td>
-                                  <td
-                                    className="text-center"
-                                    style={{ padding: "0.75rem" }}
-                                  >
-                                    <span className="text-success fw-semibold">
-                                      Dia {transaction.day_of_month}
-                                    </span>
-                                  </td>
-                                  <td
-                                    className="text-center"
-                                    style={{ padding: "0.75rem" }}
-                                  >
-                                    <Button
-                                      variant="outline-success"
-                                      size="sm"
-                                      className="me-1"
-                                      onClick={() =>
-                                        handleEditRecurring(transaction)
-                                      }
-                                      style={{
-                                        borderRadius: "6px",
-                                        padding: "4px 8px",
-                                      }}
-                                    >
-                                      <FiEdit2 size={14} />
-                                    </Button>
-                                    <Button
-                                      variant="outline-danger"
-                                      size="sm"
-                                      onClick={() =>
-                                        handleDeleteRecurring(transaction.id)
-                                      }
-                                      style={{
-                                        borderRadius: "6px",
-                                        padding: "4px 8px",
-                                      }}
-                                    >
-                                      <FiTrash2 size={14} />
-                                    </Button>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </Table>
-                        )}
-                      </Card.Body>
-                    </Card>
-
-                    {/* 2º Período - Receitas */}
-                    <Card
-                      style={{
-                        borderRadius: "12px",
-                        border: "2px solid rgba(25, 135, 84, 0.2)",
-                      }}
-                    >
-                      <Card.Header
-                        style={{
-                          background:
-                            "linear-gradient(135deg, rgba(25, 135, 84, 0.15) 0%, rgba(40, 167, 69, 0.1) 100%)",
-                          borderBottom: "2px solid rgba(25, 135, 84, 0.2)",
-                          padding: "1rem",
-                        }}
-                      >
-                        <div className="d-flex justify-content-between align-items-center">
-                          <h6 className="mb-0 fw-bold text-success">
-                            📅 2º Período (dia {period2Start} em diante)
-                          </h6>
-                          <Badge
-                            bg="success"
-                            style={{
-                              fontSize: "1rem",
-                              padding: "0.5rem 1rem",
-                              borderRadius: "8px",
-                            }}
-                          >
-                            Total: {formatCurrency(totalIncomePeriod2)}
-                          </Badge>
-                        </div>
-                      </Card.Header>
-                      <Card.Body className="p-0">
-                        {incomeRecurringPeriod2.length === 0 ? (
-                          <div className="text-center py-3 text-muted">
-                            Nenhuma receita neste período
-                          </div>
-                        ) : (
-                          <Table hover responsive className="align-middle mb-0">
-                            <thead
-                              style={{ background: "rgba(25, 135, 84, 0.05)" }}
-                            >
-                              <tr>
-                                <th
-                                  className="text-center"
-                                  style={{
-                                    padding: "0.75rem",
-                                    fontWeight: "600",
-                                    fontSize: "0.85rem",
-                                  }}
-                                >
-                                  Descrição
-                                </th>
-                                <th
-                                  className="text-center"
-                                  style={{
-                                    padding: "0.75rem",
-                                    fontWeight: "600",
-                                    fontSize: "0.85rem",
-                                  }}
-                                >
-                                  Categoria
-                                </th>
-                                <th
-                                  className="text-center"
-                                  style={{
-                                    padding: "0.75rem",
-                                    fontWeight: "600",
-                                    fontSize: "0.85rem",
-                                  }}
-                                >
-                                  Valor
-                                </th>
-                                <th
-                                  className="text-center"
-                                  style={{
-                                    padding: "0.75rem",
-                                    fontWeight: "600",
-                                    fontSize: "0.85rem",
-                                  }}
-                                >
-                                  Recorrência
-                                </th>
-                                <th
-                                  className="text-center"
-                                  style={{
-                                    padding: "0.75rem",
-                                    fontWeight: "600",
-                                    fontSize: "0.85rem",
-                                  }}
-                                >
-                                  Dia
-                                </th>
-                                <th
-                                  className="text-center"
-                                  style={{
-                                    padding: "0.75rem",
-                                    fontWeight: "600",
-                                    fontSize: "0.85rem",
-                                  }}
-                                >
-                                  Ações
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {incomeRecurringPeriod2.map((transaction) => (
-                                <tr key={transaction.id}>
-                                  <td
-                                    className="text-center"
-                                    style={{ padding: "0.75rem" }}
-                                  >
-                                    {transaction.description}
-                                  </td>
-                                  <td
-                                    className="text-center"
-                                    style={{ padding: "0.75rem" }}
-                                  >
-                                    <Badge
-                                      bg="success"
-                                      style={{
-                                        borderRadius: "6px",
-                                        padding: "4px 10px",
-                                        fontSize: "0.8rem",
-                                      }}
-                                    >
-                                      {transaction.category}
-                                    </Badge>
-                                  </td>
-                                  <td
-                                    className="text-center"
-                                    style={{ padding: "0.75rem" }}
-                                  >
-                                    <span className="text-success fw-bold">
-                                      +{formatCurrency(transaction.value)}
-                                    </span>
-                                  </td>
-                                  <td
-                                    className="text-center"
-                                    style={{ padding: "0.75rem" }}
-                                  >
-                                    <Badge
-                                      bg="success"
-                                      style={{
-                                        borderRadius: "6px",
-                                        fontSize: "0.8rem",
-                                      }}
-                                    >
-                                      {getRecurrenceLabel(transaction)}
-                                    </Badge>
-                                  </td>
-                                  <td
-                                    className="text-center"
-                                    style={{ padding: "0.75rem" }}
-                                  >
-                                    <span className="text-success fw-semibold">
-                                      Dia {transaction.day_of_month}
-                                    </span>
-                                  </td>
-                                  <td
-                                    className="text-center"
-                                    style={{ padding: "0.75rem" }}
-                                  >
-                                    <Button
-                                      variant="outline-success"
-                                      size="sm"
-                                      className="me-1"
-                                      onClick={() =>
-                                        handleEditRecurring(transaction)
-                                      }
-                                      style={{
-                                        borderRadius: "6px",
-                                        padding: "4px 8px",
-                                      }}
-                                    >
-                                      <FiEdit2 size={14} />
-                                    </Button>
-                                    <Button
-                                      variant="outline-danger"
-                                      size="sm"
-                                      onClick={() =>
-                                        handleDeleteRecurring(transaction.id)
-                                      }
-                                      style={{
-                                        borderRadius: "6px",
-                                        padding: "4px 8px",
-                                      }}
-                                    >
-                                      <FiTrash2 size={14} />
-                                    </Button>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </Table>
-                        )}
-                      </Card.Body>
-                    </Card>
-                  </>
-                ) : (
-                  <Table hover responsive className="align-middle mb-0">
-                    <thead style={{ background: "rgba(25, 135, 84, 0.05)" }}>
-                      <tr>
-                        <th
-                          className="text-center"
-                          style={{
-                            padding: "0.75rem",
-                            fontWeight: "600",
-                            fontSize: "0.85rem",
-                          }}
-                        >
-                          Descrição
-                        </th>
-                        <th
-                          className="text-center"
-                          style={{
-                            padding: "0.75rem",
-                            fontWeight: "600",
-                            fontSize: "0.85rem",
-                          }}
-                        >
-                          Categoria
-                        </th>
-                        <th
-                          className="text-center"
-                          style={{
-                            padding: "0.75rem",
-                            fontWeight: "600",
-                            fontSize: "0.85rem",
-                          }}
-                        >
-                          Valor
-                        </th>
-                        <th
-                          className="text-center"
-                          style={{
-                            padding: "0.75rem",
-                            fontWeight: "600",
-                            fontSize: "0.85rem",
-                          }}
-                        >
-                          Recorrência
-                        </th>
-                        <th
-                          className="text-center"
-                          style={{
-                            padding: "0.75rem",
-                            fontWeight: "600",
-                            fontSize: "0.85rem",
-                          }}
-                        >
-                          Dia
-                        </th>
-                        <th
-                          className="text-center"
-                          style={{
-                            padding: "0.75rem",
-                            fontWeight: "600",
-                            fontSize: "0.85rem",
-                          }}
-                        >
-                          Ações
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sortedIncomeRecurring.map((transaction) => (
-                        <tr key={transaction.id}>
-                          <td
-                            className="text-center"
-                            style={{ padding: "0.75rem" }}
-                          >
-                            {transaction.description}
-                          </td>
-                          <td
-                            className="text-center"
-                            style={{ padding: "0.75rem" }}
-                          >
-                            <Badge
-                              bg="success"
-                              style={{
-                                borderRadius: "6px",
-                                padding: "4px 10px",
-                                fontSize: "0.8rem",
-                              }}
-                            >
-                              {transaction.category}
-                            </Badge>
-                          </td>
-                          <td
-                            className="text-center"
-                            style={{ padding: "0.75rem" }}
-                          >
-                            <span className="text-success fw-bold">
-                              +{formatCurrency(transaction.value)}
-                            </span>
-                          </td>
-                          <td
-                            className="text-center"
-                            style={{ padding: "0.75rem" }}
-                          >
-                            <Badge
-                              bg="success"
-                              style={{
-                                borderRadius: "6px",
-                                fontSize: "0.8rem",
-                              }}
-                            >
-                              {getRecurrenceLabel(transaction)}
-                            </Badge>
-                          </td>
-                          <td
-                            className="text-center"
-                            style={{ padding: "0.75rem" }}
-                          >
-                            <span className="text-success fw-semibold">
-                              Dia {transaction.day_of_month}
-                            </span>
-                          </td>
-                          <td
-                            className="text-center"
-                            style={{ padding: "0.75rem" }}
-                          >
-                            <Button
-                              variant="outline-success"
-                              size="sm"
-                              className="me-1"
-                              onClick={() => handleEditRecurring(transaction)}
-                              style={{
-                                borderRadius: "6px",
-                                padding: "4px 8px",
-                              }}
-                            >
-                              <FiEdit2 size={14} />
-                            </Button>
-                            <Button
-                              variant="outline-danger"
-                              size="sm"
-                              onClick={() =>
-                                handleDeleteRecurring(transaction.id)
-                              }
-                              style={{
-                                borderRadius: "6px",
-                                padding: "4px 8px",
-                              }}
-                            >
-                              <FiTrash2 size={14} />
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </Table>
-                )}
-              </div>
-
               <div>
                 <h5 className="mb-3 d-flex align-items-center gap-2">
                   <FiDollarSign className="text-success" />
@@ -1954,6 +714,7 @@ export default function TransactionsPage() {
                         <TransactionList
                           onEdit={handleEdit}
                           onDuplicate={handleDuplicate}
+                          onConfirmRecurring={handleConfirmRecurring}
                           showPredicted={false}
                           typeFilter="income"
                           periodFilter={{ startDay: 1, endDay: period1End }}
@@ -1996,6 +757,7 @@ export default function TransactionsPage() {
                         <TransactionList
                           onEdit={handleEdit}
                           onDuplicate={handleDuplicate}
+                          onConfirmRecurring={handleConfirmRecurring}
                           showPredicted={false}
                           typeFilter="income"
                           periodFilter={{ startDay: period2Start, endDay: 31 }}
@@ -2149,6 +911,7 @@ export default function TransactionsPage() {
                           <TransactionList
                             onEdit={handleEdit}
                             onDuplicate={handleDuplicate}
+                            onConfirmRecurring={handleConfirmRecurring}
                             showPredicted={true}
                             periodFilter={{ startDay: 1, endDay: period1End }}
                           />
@@ -2283,6 +1046,7 @@ export default function TransactionsPage() {
                           <TransactionList
                             onEdit={handleEdit}
                             onDuplicate={handleDuplicate}
+                            onConfirmRecurring={handleConfirmRecurring}
                             showPredicted={true}
                             periodFilter={{
                               startDay: period2Start,
@@ -2432,6 +1196,7 @@ export default function TransactionsPage() {
                       <TransactionList
                         onEdit={handleEdit}
                         onDuplicate={handleDuplicate}
+                        onConfirmRecurring={handleConfirmRecurring}
                         showPredicted={true}
                         typeFilter="income"
                       />
@@ -2458,6 +1223,7 @@ export default function TransactionsPage() {
                       <TransactionList
                         onEdit={handleEdit}
                         onDuplicate={handleDuplicate}
+                        onConfirmRecurring={handleConfirmRecurring}
                         showPredicted={true}
                         typeFilter="expense"
                       />
@@ -2481,6 +1247,17 @@ export default function TransactionsPage() {
         show={showRecurringForm}
         onHide={handleCloseRecurringForm}
         transaction={editingRecurring}
+        defaultType={activeTab === "income" ? "income" : "expense"}
+      />
+
+      <ConfirmRecurringModal
+        show={showConfirmModal}
+        onHide={() => {
+          setShowConfirmModal(false);
+          setConfirmingTransaction(null);
+        }}
+        transaction={confirmingTransaction}
+        onConfirm={handleConfirmWithValue}
       />
     </div>
   );

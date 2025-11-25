@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Card, Button, Form, Badge, Row, Col, Alert } from "react-bootstrap";
 import {
   FiDownload,
@@ -8,6 +8,9 @@ import {
   FiTrash2,
   FiPlus,
   FiCalendar,
+  FiLayout,
+  FiEye,
+  FiEyeOff,
 } from "react-icons/fi";
 import { useFinanceStore } from "@/store/financeStore";
 import { DEFAULT_CATEGORIES } from "@/types";
@@ -18,6 +21,34 @@ import {
   showConfirm,
 } from "@/lib/sweetalert";
 import { parseCurrency } from "@/utils/formatCurrency";
+
+interface ImportedRecurringTransaction {
+  description: string;
+  type: string;
+  category: string;
+  value: number;
+  day_of_month?: number;
+  recurrence_type?: string;
+  start_date?: string;
+  end_date?: string | null;
+  total_installments?: number | null;
+  current_installment?: number | null;
+  is_active?: boolean;
+}
+
+interface ImportedTransaction {
+  description: string;
+  type: string;
+  category: string;
+  value: number;
+  date: string;
+}
+
+interface ImportData {
+  categories?: string[];
+  recurringTransactions?: ImportedRecurringTransaction[];
+  realTransactions?: ImportedTransaction[];
+}
 
 export default function SettingsPage() {
   const {
@@ -41,30 +72,100 @@ export default function SettingsPage() {
   const [periodSeparationEnabled, setPeriodSeparationEnabled] = useState(false);
   const [period1End, setPeriod1End] = useState(15);
   const [period2Start, setPeriod2Start] = useState(16);
-  const [isHydrated, setIsHydrated] = useState(false);
 
+  // Configuração do Dashboard
+  const [dashboardCards, setDashboardCards] = useState({
+    balance: true,
+    monthlyIncome: true,
+    monthlyExpense: true,
+    periodCards: true,
+    charts: true,
+    recentTransactions: true,
+  });
+
+  // Carregar configurações do banco de dados
   useEffect(() => {
-    const savedEnabled = localStorage.getItem("periodSeparationEnabled");
-    const saved1 = localStorage.getItem("paymentPeriod1End");
-    const saved2 = localStorage.getItem("paymentPeriod2Start");
-
-    if (savedEnabled) setPeriodSeparationEnabled(savedEnabled === "true");
-    if (saved1) setPeriod1End(parseInt(saved1));
-    if (saved2) setPeriod2Start(parseInt(saved2));
-
-    setIsHydrated(true);
+    loadUserSettings();
   }, []);
 
-  useEffect(() => {
-    if (isHydrated) {
-      localStorage.setItem(
-        "periodSeparationEnabled",
-        periodSeparationEnabled.toString()
-      );
-      localStorage.setItem("paymentPeriod1End", period1End.toString());
-      localStorage.setItem("paymentPeriod2Start", period2Start.toString());
+  const loadUserSettings = async () => {
+    try {
+      const supabaseClient = (
+        await import("@/lib/supabase-client")
+      ).createClient();
+      const {
+        data: { user },
+      } = await supabaseClient.auth.getUser();
+
+      if (!user) {
+        return;
+      }
+
+      // Buscar configurações do usuário
+      const { data: settings, error } = await supabaseClient
+        .from("user_settings")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+      if (error && error.code !== "PGRST116") {
+        console.error("Erro ao carregar configurações:", error);
+        return;
+      }
+
+      if (settings) {
+        setPeriodSeparationEnabled(settings.period_separation_enabled || false);
+        setPeriod1End(settings.period_1_end || 15);
+        setPeriod2Start(settings.period_2_start || 16);
+
+        if (settings.dashboard_config) {
+          setDashboardCards(settings.dashboard_config);
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao carregar configurações:", error);
     }
-  }, [isHydrated, periodSeparationEnabled, period1End, period2Start]);
+  };
+
+  const saveUserSettings = useCallback(async () => {
+    try {
+      const supabaseClient = (
+        await import("@/lib/supabase-client")
+      ).createClient();
+      const {
+        data: { user },
+      } = await supabaseClient.auth.getUser();
+
+      if (!user) {
+        showError("Você precisa estar logado para salvar configurações.");
+        return;
+      }
+
+      const settingsData = {
+        user_id: user.id,
+        period_separation_enabled: periodSeparationEnabled,
+        period_1_end: period1End,
+        period_2_start: period2Start,
+        dashboard_config: dashboardCards,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error } = await supabaseClient
+        .from("user_settings")
+        .upsert(settingsData, { onConflict: "user_id" });
+
+      if (error) {
+        console.error("Erro ao salvar configurações:", error);
+        showError("Erro ao salvar configurações.");
+        return;
+      }
+
+      showSuccess("Configurações salvas com sucesso!");
+    } catch (error) {
+      console.error("Erro ao salvar configurações:", error);
+      showError("Erro ao salvar configurações.");
+    }
+  }, [periodSeparationEnabled, period1End, period2Start, dashboardCards]);
 
   const handleExport = async () => {
     try {
@@ -188,7 +289,7 @@ export default function SettingsPage() {
     }
   };
 
-  const handleImportNewFormat = async (data: any) => {
+  const handleImportNewFormat = async (data: ImportData) => {
     try {
       const supabaseClient = (
         await import("@/lib/supabase-client")
@@ -248,15 +349,17 @@ export default function SettingsPage() {
       }
 
       if (data.realTransactions && data.realTransactions.length > 0) {
-        const transactionsToInsert = data.realTransactions.map((t: any) => ({
-          description: t.description,
-          type: t.type,
-          category: t.category,
-          value: t.value,
-          date: t.date,
-          month: t.date.substring(0, 7),
-          user_id: user.id,
-        }));
+        const transactionsToInsert = data.realTransactions.map(
+          (t: ImportedTransaction) => ({
+            description: t.description,
+            type: t.type,
+            category: t.category,
+            value: t.value,
+            date: t.date,
+            month: t.date.substring(0, 7),
+            user_id: user.id,
+          })
+        );
 
         const { error } = await supabaseClient
           .from("transactions")
@@ -598,12 +701,20 @@ export default function SettingsPage() {
                     </Col>
                   </Row>
                   <div className="text-center mt-3">
-                    <Badge
-                      bg="secondary"
-                      style={{ fontSize: "0.75rem", padding: "6px 12px" }}
+                    <Button
+                      onClick={saveUserSettings}
+                      className="shadow"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                        border: "none",
+                        borderRadius: "10px",
+                        padding: "10px 24px",
+                        fontWeight: "600",
+                      }}
                     >
-                      💾 Salvo automaticamente
-                    </Badge>
+                      💾 Salvar Configurações
+                    </Button>
                   </div>
                   <small className="text-muted d-block mt-3 text-center">
                     💡 Exemplo: Se você recebe no dia 10 e no dia 20, configure
@@ -611,6 +722,277 @@ export default function SettingsPage() {
                   </small>
                 </div>
               )}
+            </Card.Body>
+          </Card>
+        </Col>
+
+        <Col xs={12}>
+          <Card className="border-0 shadow-card">
+            <Card.Body className="p-3 p-md-4">
+              <div className="d-flex align-items-center gap-3 mb-4">
+                <div
+                  className="d-flex align-items-center justify-content-center"
+                  style={{
+                    width: "50px",
+                    height: "50px",
+                    borderRadius: "12px",
+                    background:
+                      "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+                  }}
+                >
+                  <FiLayout size={24} className="text-white" />
+                </div>
+                <div>
+                  <h5 className="mb-0 fw-bold">Personalizar Dashboard</h5>
+                  <small className="text-muted">
+                    Escolha quais cards aparecerão no seu dashboard
+                  </small>
+                </div>
+              </div>
+
+              <div className="mb-3">
+                <p className="text-muted small mb-4">
+                  Selecione os cards e seções que deseja visualizar na página
+                  inicial:
+                </p>
+
+                {/* Seção: Cards de Resumo */}
+                <div className="mb-4">
+                  <h6
+                    className="fw-bold mb-3"
+                    style={{ color: "var(--foreground)" }}
+                  >
+                    💳 Cards de Resumo Mensal
+                  </h6>
+                  <Row className="g-3">
+                    <Col xs={12} md={4}>
+                      <div
+                        className="p-3"
+                        style={{
+                          background: "rgba(40, 167, 69, 0.05)",
+                          borderRadius: "10px",
+                          border: "2px solid rgba(40, 167, 69, 0.2)",
+                        }}
+                      >
+                        <Form.Check
+                          type="checkbox"
+                          id="dashboard-income"
+                          label="📈 Receitas Totais"
+                          checked={dashboardCards.monthlyIncome}
+                          onChange={(e) =>
+                            setDashboardCards({
+                              ...dashboardCards,
+                              monthlyIncome: e.target.checked,
+                            })
+                          }
+                          className="fw-semibold"
+                        />
+                        <small className="text-muted ms-4 d-block mt-1">
+                          Total de receitas do mês
+                        </small>
+                      </div>
+                    </Col>
+
+                    <Col xs={12} md={4}>
+                      <div
+                        className="p-3"
+                        style={{
+                          background: "rgba(220, 53, 69, 0.05)",
+                          borderRadius: "10px",
+                          border: "2px solid rgba(220, 53, 69, 0.2)",
+                        }}
+                      >
+                        <Form.Check
+                          type="checkbox"
+                          id="dashboard-expense"
+                          label="📉 Despesas Totais"
+                          checked={dashboardCards.monthlyExpense}
+                          onChange={(e) =>
+                            setDashboardCards({
+                              ...dashboardCards,
+                              monthlyExpense: e.target.checked,
+                            })
+                          }
+                          className="fw-semibold"
+                        />
+                        <small className="text-muted ms-4 d-block mt-1">
+                          Total de despesas do mês
+                        </small>
+                      </div>
+                    </Col>
+
+                    <Col xs={12} md={4}>
+                      <div
+                        className="p-3"
+                        style={{
+                          background: "rgba(102, 126, 234, 0.05)",
+                          borderRadius: "10px",
+                          border: "2px solid rgba(102, 126, 234, 0.2)",
+                        }}
+                      >
+                        <Form.Check
+                          type="checkbox"
+                          id="dashboard-balance"
+                          label="💰 Saldo do Mês"
+                          checked={dashboardCards.balance}
+                          onChange={(e) =>
+                            setDashboardCards({
+                              ...dashboardCards,
+                              balance: e.target.checked,
+                            })
+                          }
+                          className="fw-semibold"
+                        />
+                        <small className="text-muted ms-4 d-block mt-1">
+                          Saldo total do mês atual
+                        </small>
+                      </div>
+                    </Col>
+                  </Row>
+                </div>
+
+                {/* Seção: Cards por Período */}
+                <div className="mb-4">
+                  <h6
+                    className="fw-bold mb-3"
+                    style={{ color: "var(--foreground)" }}
+                  >
+                    📅 Cards por Período de Pagamento
+                  </h6>
+                  <Row className="g-3">
+                    <Col xs={12}>
+                      <div
+                        className="p-3"
+                        style={{
+                          background: periodSeparationEnabled
+                            ? "rgba(102, 126, 234, 0.05)"
+                            : "rgba(108, 117, 125, 0.05)",
+                          borderRadius: "10px",
+                          border: periodSeparationEnabled
+                            ? "2px solid rgba(102, 126, 234, 0.2)"
+                            : "2px solid rgba(108, 117, 125, 0.2)",
+                        }}
+                      >
+                        <Form.Check
+                          type="checkbox"
+                          id="dashboard-periods"
+                          label="📅 1º Período e 2º Período"
+                          checked={dashboardCards.periodCards}
+                          onChange={(e) =>
+                            setDashboardCards({
+                              ...dashboardCards,
+                              periodCards: e.target.checked,
+                            })
+                          }
+                          className="fw-semibold"
+                          disabled={!periodSeparationEnabled}
+                        />
+                        <small className="text-muted ms-4 d-block mt-1">
+                          {periodSeparationEnabled
+                            ? "Exibe cards separados por período de pagamento"
+                            : "⚠️ Ative a separação de períodos na seção acima para usar esta opção"}
+                        </small>
+                      </div>
+                    </Col>
+                  </Row>
+                </div>
+
+                {/* Seção: Gráficos */}
+                <div className="mb-4">
+                  <h6
+                    className="fw-bold mb-3"
+                    style={{ color: "var(--foreground)" }}
+                  >
+                    📊 Gráficos e Análises
+                  </h6>
+                  <Row className="g-3">
+                    <Col xs={12}>
+                      <div
+                        className="p-3"
+                        style={{
+                          background: "rgba(255, 193, 7, 0.05)",
+                          borderRadius: "10px",
+                          border: "2px solid rgba(255, 193, 7, 0.2)",
+                        }}
+                      >
+                        <Form.Check
+                          type="checkbox"
+                          id="dashboard-charts"
+                          label="📊 Gráficos (Despesas por Categoria, Fixas vs Variáveis, etc.)"
+                          checked={dashboardCards.charts}
+                          onChange={(e) =>
+                            setDashboardCards({
+                              ...dashboardCards,
+                              charts: e.target.checked,
+                            })
+                          }
+                          className="fw-semibold"
+                        />
+                        <small className="text-muted ms-4 d-block mt-1">
+                          Inclui: Despesas por Categoria, Despesas Fixas vs
+                          Variáveis, Evolução do Saldo
+                        </small>
+                      </div>
+                    </Col>
+                  </Row>
+                </div>
+
+                {/* Seção: Estatísticas */}
+                <div className="mb-4">
+                  <h6
+                    className="fw-bold mb-3"
+                    style={{ color: "var(--foreground)" }}
+                  >
+                    📈 Estatísticas Financeiras
+                  </h6>
+                  <Row className="g-3">
+                    <Col xs={12}>
+                      <div
+                        className="p-3"
+                        style={{
+                          background: "rgba(23, 162, 184, 0.05)",
+                          borderRadius: "10px",
+                          border: "2px solid rgba(23, 162, 184, 0.2)",
+                        }}
+                      >
+                        <Form.Check
+                          type="checkbox"
+                          id="dashboard-recent"
+                          label="🕒 Transações Recentes e Estatísticas"
+                          checked={dashboardCards.recentTransactions}
+                          onChange={(e) =>
+                            setDashboardCards({
+                              ...dashboardCards,
+                              recentTransactions: e.target.checked,
+                            })
+                          }
+                          className="fw-semibold"
+                        />
+                        <small className="text-muted ms-4 d-block mt-1">
+                          Lista das últimas transações e estatísticas gerais
+                        </small>
+                      </div>
+                    </Col>
+                  </Row>
+                </div>
+
+                <div className="text-center mt-4">
+                  <Button
+                    onClick={saveUserSettings}
+                    className="shadow"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+                      border: "none",
+                      borderRadius: "10px",
+                      padding: "10px 24px",
+                      fontWeight: "600",
+                    }}
+                  >
+                    💾 Salvar Configurações
+                  </Button>
+                </div>
+              </div>
             </Card.Body>
           </Card>
         </Col>

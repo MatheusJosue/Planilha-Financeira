@@ -2,7 +2,14 @@
 
 import { useState } from "react";
 import { Table, Button, Badge, Form, InputGroup } from "react-bootstrap";
-import { FiEdit, FiTrash2, FiSearch, FiMenu, FiCopy } from "react-icons/fi";
+import {
+  FiEdit,
+  FiTrash2,
+  FiSearch,
+  FiMenu,
+  FiCopy,
+  FiRepeat,
+} from "react-icons/fi";
 import { showConfirm } from "@/lib/sweetalert";
 import {
   DndContext,
@@ -29,6 +36,7 @@ import { formatDate } from "@/utils/formatDate";
 interface TransactionListProps {
   onEdit: (transaction: Transaction) => void;
   onDuplicate?: (transaction: Transaction) => void;
+  onConfirmRecurring?: (transaction: Transaction) => void;
   showPredicted?: boolean;
   typeFilter?: "income" | "expense";
   periodFilter?: {
@@ -42,6 +50,7 @@ interface SortableRowProps {
   onEdit: (transaction: Transaction) => void;
   onDelete: (id: string, description: string) => void;
   onDuplicate?: (transaction: Transaction) => void;
+  onConfirmRecurring?: (transaction: Transaction) => void;
 }
 
 function SortableRow({
@@ -49,6 +58,7 @@ function SortableRow({
   onEdit,
   onDelete,
   onDuplicate,
+  onConfirmRecurring,
 }: SortableRowProps) {
   const {
     attributes,
@@ -72,6 +82,59 @@ function SortableRow({
 
   return (
     <tr ref={setNodeRef} style={style}>
+      <td className="text-start" style={{ padding: "1rem" }}>
+        <span
+          className={
+            transaction.type === "income"
+              ? "text-success fw-bold"
+              : "text-danger fw-bold"
+          }
+          style={{ fontSize: "1rem" }}
+        >
+          {transaction.type === "income" ? "+" : "-"}
+          {formatCurrency(transaction.value)}
+        </span>
+      </td>
+      <td style={{ padding: "1rem", fontWeight: "500" }}>
+        <div className="d-flex align-items-center gap-2">
+          {transaction.recurring_id && (
+            <FiRepeat
+              size={16}
+              className={
+                transaction.type === "income" ? "text-success" : "text-danger"
+              }
+              title="Transação Recorrente"
+            />
+          )}
+          <span>{transaction.description}</span>
+        </div>
+      </td>
+      <td style={{ padding: "1rem" }}>
+        <Badge
+          bg="secondary"
+          style={{
+            padding: "6px 12px",
+            borderRadius: "8px",
+            fontWeight: "500",
+            fontSize: "0.85rem",
+          }}
+        >
+          {transaction.category}
+        </Badge>
+      </td>
+      <td style={{ padding: "1rem" }}>
+        <Badge
+          bg={transaction.type === "income" ? "success" : "danger"}
+          style={{
+            padding: "6px 12px",
+            borderRadius: "8px",
+            fontWeight: "500",
+            fontSize: "0.85rem",
+          }}
+        >
+          {transaction.type === "income" ? "Receita" : "Despesa"}
+        </Badge>
+      </td>
       <td
         {...attributes}
         {...listeners}
@@ -108,50 +171,26 @@ function SortableRow({
           )}
         </div>
       </td>
-      <td style={{ padding: "1rem", fontWeight: "500" }}>
-        {transaction.description}
-      </td>
-      <td style={{ padding: "1rem" }}>
-        <Badge
-          bg="secondary"
-          style={{
-            padding: "6px 12px",
-            borderRadius: "8px",
-            fontWeight: "500",
-            fontSize: "0.85rem",
-          }}
-        >
-          {transaction.category}
-        </Badge>
-      </td>
-      <td style={{ padding: "1rem" }}>
-        <Badge
-          bg={transaction.type === "income" ? "success" : "danger"}
-          style={{
-            padding: "6px 12px",
-            borderRadius: "8px",
-            fontWeight: "500",
-            fontSize: "0.85rem",
-          }}
-        >
-          {transaction.type === "income" ? "Receita" : "Despesa"}
-        </Badge>
-      </td>
-      <td className="text-end" style={{ padding: "1rem" }}>
-        <span
-          className={
-            transaction.type === "income"
-              ? "text-success fw-bold"
-              : "text-danger fw-bold"
-          }
-          style={{ fontSize: "1rem" }}
-        >
-          {transaction.type === "income" ? "+" : "-"}
-          {formatCurrency(transaction.value)}
-        </span>
-      </td>
       <td className="text-center" style={{ padding: "1rem" }}>
-        {!isPredicted && (
+        {isPredicted && transaction.recurring_id ? (
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => {
+              onConfirmRecurring?.(transaction);
+            }}
+            style={{
+              borderRadius: "8px",
+              padding: "6px 16px",
+              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              border: "none",
+              fontWeight: "600",
+            }}
+            title="Confirmar conta recorrente com possibilidade de ajustar valor"
+          >
+            ✓ Confirmar
+          </Button>
+        ) : !isPredicted ? (
           <>
             <Button
               variant="outline-success"
@@ -181,7 +220,7 @@ function SortableRow({
               <FiTrash2 />
             </Button>
           </>
-        )}
+        ) : null}
       </td>
     </tr>
   );
@@ -190,6 +229,7 @@ function SortableRow({
 export function TransactionList({
   onEdit,
   onDuplicate,
+  onConfirmRecurring,
   showPredicted = false,
   typeFilter,
   periodFilter,
@@ -223,8 +263,11 @@ export function TransactionList({
   const filteredTransactions = transactions.filter((t) => {
     const isPredicted = t.is_predicted === true;
 
-    if (showPredicted && !isPredicted) return false;
-    if (!showPredicted && isPredicted) return false;
+    // Filter by predicted status
+    if (showPredicted !== undefined) {
+      if (showPredicted && !isPredicted) return false;
+      if (!showPredicted && isPredicted) return false;
+    }
 
     if (typeFilter && t.type !== typeFilter) return false;
 
@@ -259,9 +302,20 @@ export function TransactionList({
     return matchesSearch && matchesType && matchesCategory && matchesMonth;
   });
 
-  let sortedTransactions = [...filteredTransactions].sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-  );
+  // Sort transactions: one-time first (no recurring_id), then recurring (with recurring_id)
+  // Within each group, sort by date (newest first)
+  let sortedTransactions = [...filteredTransactions].sort((a, b) => {
+    // Group by recurring status first
+    const aIsRecurring = !!a.recurring_id;
+    const bIsRecurring = !!b.recurring_id;
+
+    if (aIsRecurring !== bIsRecurring) {
+      return aIsRecurring ? 1 : -1; // One-time first
+    }
+
+    // Within same group, sort by date (newest first)
+    return new Date(b.date).getTime() - new Date(a.date).getTime();
+  });
 
   if (localOrder.length > 0) {
     sortedTransactions = sortedTransactions.sort((a, b) => {
@@ -313,8 +367,9 @@ export function TransactionList({
             <FiMenu size={20} />
             <div>
               <strong>Transações Previstas:</strong> As transações com badge
-              &quot;Previsto&quot; são geradas automaticamente com base nas suas
-              transações recorrentes e não podem ser editadas diretamente.
+              &quot;Previsto&quot; são geradas automaticamente. Use o botão{" "}
+              <strong>&quot;✓ Confirmar&quot;</strong> para confirmar contas
+              recorrentes e ajustar o valor se necessário.
             </div>
           </div>
         </div>
@@ -415,15 +470,14 @@ export function TransactionList({
             >
               <tr>
                 <th
+                  className="text-start"
                   style={{
                     padding: "1rem",
                     fontWeight: "600",
                     fontSize: "0.9rem",
                   }}
                 >
-                  <div className="d-flex align-items-center gap-2">
-                    <FiMenu /> <span>Data</span>
-                  </div>
+                  Valor
                 </th>
                 <th
                   style={{
@@ -453,14 +507,15 @@ export function TransactionList({
                   Tipo
                 </th>
                 <th
-                  className="text-end"
                   style={{
                     padding: "1rem",
                     fontWeight: "600",
                     fontSize: "0.9rem",
                   }}
                 >
-                  Valor
+                  <div className="d-flex align-items-center gap-2">
+                    <FiMenu /> <span>Data</span>
+                  </div>
                 </th>
                 <th
                   className="text-center"
@@ -502,6 +557,7 @@ export function TransactionList({
                       onEdit={onEdit}
                       onDelete={handleDelete}
                       onDuplicate={onDuplicate}
+                      onConfirmRecurring={onConfirmRecurring}
                     />
                   ))}
                 </SortableContext>

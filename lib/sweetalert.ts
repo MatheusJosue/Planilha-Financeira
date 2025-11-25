@@ -20,6 +20,30 @@ export const showError = (message: string, title: string = 'Erro!') => {
   });
 };
 
+export const showSuccessToast = (message: string) => {
+  return Swal.fire({
+    icon: 'success',
+    title: message,
+    toast: true,
+    position: 'bottom-end',
+    showConfirmButton: false,
+    timer: 3000,
+    timerProgressBar: true,
+  });
+};
+
+export const showErrorToast = (message: string) => {
+  return Swal.fire({
+    icon: 'error',
+    title: message,
+    toast: true,
+    position: 'bottom-end',
+    showConfirmButton: false,
+    timer: 3000,
+    timerProgressBar: true,
+  });
+};
+
 export const showWarning = (message: string, title: string = 'Atenção!') => {
   return Swal.fire({
     icon: 'warning',
