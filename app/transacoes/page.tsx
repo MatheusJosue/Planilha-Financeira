@@ -79,16 +79,19 @@ export default function TransactionsPage() {
   };
 
   const {
-    recurringTransactions,
     loadRecurringTransactions,
+    loadFromSupabase,
     convertPredictedToReal,
     monthsData,
     currentMonth,
   } = useFinanceStore();
 
   useEffect(() => {
-    loadRecurringTransactions();
-  }, [loadRecurringTransactions]);
+    loadRecurringTransactions().then(() => {
+      // Regenerate predicted transactions after loading recurring ones
+      loadFromSupabase();
+    });
+  }, [loadRecurringTransactions, loadFromSupabase]);
 
   const handleEdit = (transaction: Transaction) => {
     setEditingTransaction(transaction);
@@ -150,35 +153,31 @@ export default function TransactionsPage() {
     setEditingRecurring(undefined);
   };
 
-  const activeRecurring = recurringTransactions.filter((t) => t.is_active);
   const monthData = monthsData[currentMonth];
   const currentTransactions = monthData?.transactions || [];
 
-  const totalMonthlyIncome = activeRecurring
-    .filter((t) => t.type === "income")
-    .reduce((sum, t) => sum + t.value, 0);
-
-  const totalMonthlyExpense = activeRecurring
-    .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + t.value, 0);
-
   const currentIncomes = currentTransactions
-    .filter((t) => t.type === "income" && !t.is_predicted)
+    .filter((t) => t.type === "income" && !t.is_predicted && !t.recurring_id)
     .reduce((sum, t) => sum + t.value, 0);
 
   const currentExpenses = currentTransactions
-    .filter((t) => t.type === "expense" && !t.is_predicted)
+    .filter((t) => t.type === "expense" && !t.is_predicted && !t.recurring_id)
+    .reduce((sum, t) => sum + t.value, 0);
+
+  const confirmedRecurringIncome = currentTransactions
+    .filter((t) => t.type === "income" && !t.is_predicted && t.recurring_id)
+    .reduce((sum, t) => sum + t.value, 0);
+
+  const confirmedRecurringExpense = currentTransactions
+    .filter((t) => t.type === "expense" && !t.is_predicted && t.recurring_id)
     .reduce((sum, t) => sum + t.value, 0);
 
   const predictedTransactions = currentTransactions.filter(
     (t) => t.is_predicted
   );
 
-  // Para a aba de previsões, incluir transações previstas E transações recorrentes
-  // (as recorrentes já estão em currentTransactions com recurring_id)
-  const allPredictedTransactions = currentTransactions.filter(
-    (t) => t.is_predicted || t.recurring_id
-  );
+  // Para a aba de previsões, incluir TODAS as transações do mês
+  const allPredictedTransactions = currentTransactions;
 
   const predictedIncome = allPredictedTransactions
     .filter((t) => t.type === "income")
@@ -187,6 +186,7 @@ export default function TransactionsPage() {
     .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + t.value, 0);
 
+  // Incluir TODAS as transações confirmadas (pontuais + recorrentes)
   const incomeTransactions = currentTransactions.filter(
     (t) => t.type === "income" && !t.is_predicted
   );
@@ -275,9 +275,7 @@ export default function TransactionsPage() {
         </Button>
       </div>
 
-      {(activeTab === "transactions" || activeTab === "income") && (
-        <MonthSelector />
-      )}
+      <MonthSelector />
 
       {/* Cards de Resumo */}
       <Row className="mb-4 g-3">
@@ -297,7 +295,15 @@ export default function TransactionsPage() {
                     {formatCurrency(currentExpenses)}
                   </h3>
                   <small className="text-muted">
-                    {expenseTransactions.length} transações
+                    {
+                      currentTransactions.filter(
+                        (t) =>
+                          t.type === "expense" &&
+                          !t.is_predicted &&
+                          !t.recurring_id
+                      ).length
+                    }{" "}
+                    transações
                   </small>
                 </Card.Body>
               </Card>
@@ -313,11 +319,18 @@ export default function TransactionsPage() {
                     <h6 className="text-muted mb-0">Contas Recorrentes</h6>
                   </div>
                   <h3 className="text-danger mb-0">
-                    {formatCurrency(totalMonthlyExpense)}
+                    {formatCurrency(confirmedRecurringExpense)}
                   </h3>
                   <small className="text-muted">
-                    {activeRecurring.filter((t) => t.type === "expense").length}{" "}
-                    contas mensais
+                    {
+                      currentTransactions.filter(
+                        (t) =>
+                          t.type === "expense" &&
+                          !t.is_predicted &&
+                          t.recurring_id
+                      ).length
+                    }{" "}
+                    confirmadas
                   </small>
                 </Card.Body>
               </Card>
@@ -333,9 +346,13 @@ export default function TransactionsPage() {
                     <h6 className="text-muted mb-0">Total do Mês</h6>
                   </div>
                   <h3 className="text-warning mb-0">
-                    {formatCurrency(currentExpenses + totalMonthlyExpense)}
+                    {formatCurrency(
+                      currentExpenses + confirmedRecurringExpense
+                    )}
                   </h3>
-                  <small className="text-muted">Despesas totais</small>
+                  <small className="text-muted">
+                    Pontuais + Fixas confirmadas
+                  </small>
                 </Card.Body>
               </Card>
             </Col>
@@ -355,9 +372,11 @@ export default function TransactionsPage() {
                     <h6 className="text-muted mb-0">Total de Receitas</h6>
                   </div>
                   <h3 className="text-success mb-0">
-                    {formatCurrency(currentIncomes + totalMonthlyIncome)}
+                    {formatCurrency(currentIncomes + confirmedRecurringIncome)}
                   </h3>
-                  <small className="text-muted">Transações + Recorrentes</small>
+                  <small className="text-muted">
+                    Pontuais + Fixas confirmadas
+                  </small>
                 </Card.Body>
               </Card>
             </Col>
@@ -375,7 +394,15 @@ export default function TransactionsPage() {
                     {formatCurrency(currentIncomes)}
                   </h3>
                   <small className="text-muted">
-                    {incomeTransactions.length} transações
+                    {
+                      currentTransactions.filter(
+                        (t) =>
+                          t.type === "income" &&
+                          !t.is_predicted &&
+                          !t.recurring_id
+                      ).length
+                    }{" "}
+                    transações
                   </small>
                 </Card.Body>
               </Card>
@@ -391,11 +418,18 @@ export default function TransactionsPage() {
                     <h6 className="text-muted mb-0">Receitas Fixas</h6>
                   </div>
                   <h3 className="text-primary mb-0">
-                    {formatCurrency(totalMonthlyIncome)}
+                    {formatCurrency(confirmedRecurringIncome)}
                   </h3>
                   <small className="text-muted">
-                    {activeRecurring.filter((t) => t.type === "income").length}{" "}
-                    recorrentes
+                    {
+                      currentTransactions.filter(
+                        (t) =>
+                          t.type === "income" &&
+                          !t.is_predicted &&
+                          t.recurring_id
+                      ).length
+                    }{" "}
+                    confirmadas
                   </small>
                 </Card.Body>
               </Card>
@@ -660,6 +694,7 @@ export default function TransactionsPage() {
                   <TransactionList
                     onEdit={handleEdit}
                     onDuplicate={handleDuplicate}
+                    onConfirmRecurring={handleConfirmRecurring}
                     showPredicted={false}
                     typeFilter="expense"
                   />
@@ -769,6 +804,7 @@ export default function TransactionsPage() {
                   <TransactionList
                     onEdit={handleEdit}
                     onDuplicate={handleDuplicate}
+                    onConfirmRecurring={handleConfirmRecurring}
                     showPredicted={false}
                     typeFilter="income"
                   />

@@ -173,23 +173,35 @@ function SortableRow({
       </td>
       <td className="text-center" style={{ padding: "1rem" }}>
         {isPredicted && transaction.recurring_id ? (
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => {
-              onConfirmRecurring?.(transaction);
-            }}
-            style={{
-              borderRadius: "8px",
-              padding: "6px 16px",
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-              border: "none",
-              fontWeight: "600",
-            }}
-            title="Confirmar conta recorrente com possibilidade de ajustar valor"
-          >
-            ✓ Confirmar
-          </Button>
+          <>
+            <Button
+              variant="primary"
+              size="sm"
+              className="me-2"
+              onClick={() => {
+                onConfirmRecurring?.(transaction);
+              }}
+              style={{
+                borderRadius: "8px",
+                padding: "6px 16px",
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                border: "none",
+                fontWeight: "600",
+              }}
+              title="Confirmar conta recorrente com possibilidade de ajustar valor"
+            >
+              ✓ Confirmar
+            </Button>
+            <Button
+              variant="outline-danger"
+              size="sm"
+              onClick={() => onDelete(transaction.id, transaction.description)}
+              style={{ borderRadius: "8px", padding: "6px 12px" }}
+              title="Excluir transação prevista"
+            >
+              <FiTrash2 />
+            </Button>
+          </>
         ) : !isPredicted ? (
           <>
             <Button

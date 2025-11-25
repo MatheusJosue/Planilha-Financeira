@@ -25,7 +25,8 @@ export function ConfirmRecurringModal({
 
   const handleShow = () => {
     if (transaction) {
-      setValue(formatCurrency(transaction.value));
+      // Formatar apenas o número, sem símbolo de moeda
+      setValue(transaction.value.toFixed(2).replace(".", ","));
     }
   };
 

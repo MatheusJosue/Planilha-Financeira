@@ -212,17 +212,28 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       const predictedTransactions = get().generatePredictedTransactions(12);
       
       if (transactionsData && transactionsData.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         transactionsData.forEach((t: any) => {
           const month = t.date.substring(0, 7);
           if (!monthsData[month]) {
             monthsData[month] = { transactions: [] };
           }
+          
+          // Processar valor corretamente
+          let numValue: number;
+          if (typeof t.value === 'string') {
+            const cleanValue = t.value.replace(/\./g, '').replace(',', '.');
+            numValue = parseFloat(cleanValue) || 0;
+          } else {
+            numValue = Number(t.value) || 0;
+          }
+          
           monthsData[month].transactions.push({
             id: t.id,
             description: t.description,
             type: t.type as 'income' | 'expense',
             category: t.category,
-            value: Number(t.value),
+            value: numValue,
             date: t.date,
             recurring_id: t.recurring_id,
             is_predicted: false,
@@ -790,7 +801,25 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       return;
     }
 
-    set({ recurringTransactions: data || [] });
+    // Garantir que valores sejam números
+    const processedData = (data || []).map(t => {
+      let numValue: number;
+      
+      if (typeof t.value === 'string') {
+        // Se for string, remover pontos de milhar e trocar vírgula por ponto
+        const cleanValue = t.value.replace(/\./g, '').replace(',', '.');
+        numValue = parseFloat(cleanValue) || 0;
+      } else {
+        numValue = Number(t.value) || 0;
+      }
+      
+      return {
+        ...t,
+        value: numValue,
+      };
+    });
+
+    set({ recurringTransactions: processedData });
   },
 
   generatePredictedTransactions: (monthsAhead: number = 12): Transaction[] => {
@@ -834,7 +863,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
             : recurring.description,
           type: recurring.type,
           category: recurring.category,
-          value: recurring.value,
+          value: typeof recurring.value === 'string' ? parseFloat(recurring.value) : Number(recurring.value),
           date: dateStr,
           recurring_id: recurring.id,
           is_predicted: true,
