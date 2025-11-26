@@ -1,6 +1,6 @@
 "use client";
 
-import { Card } from "react-bootstrap";
+import { Card, Table } from "react-bootstrap";
 import {
   PieChart,
   Pie,
@@ -52,9 +52,10 @@ const CustomTooltip = ({
 };
 
 export function ExpensesByCategoryChart() {
-  const { transactions } = useFinanceStore();
+  const { transactions, categoryLimits } = useFinanceStore();
 
   const expenses = transactions.filter((t) => t.type === "expense");
+  const incomes = transactions.filter((t) => t.type === "income");
 
   const categoryTotals = expenses.reduce((acc, t) => {
     acc[t.category] = (acc[t.category] || 0) + t.value;
@@ -98,7 +99,40 @@ export function ExpensesByCategoryChart() {
   }
 
   const totalExpenses = expenses.reduce((sum, t) => sum + t.value, 0);
+  const totalIncomes = incomes.reduce((sum, t) => sum + t.value, 0);
   const topCategory = data[0];
+
+  // Calculate values for the category expense list
+  const categoryListData = data.map(item => {
+    const limit = categoryLimits[item.name];
+    let maxValueToSpend = 0;
+
+    if (limit) {
+      if (limit.maxValue !== undefined) {
+        // Use the absolute maximum value if defined
+        maxValueToSpend = limit.maxValue;
+      } else if (limit.maxPercentage !== undefined) {
+        // Calculate the maximum value based on percentage of total expenses
+        maxValueToSpend = (limit.maxPercentage / 100) * totalExpenses;
+      }
+    }
+
+    // If no limit is set, use the amount spent as the limit (for display purposes)
+    if (maxValueToSpend === 0) {
+      maxValueToSpend = item.value;
+    }
+
+    const percentageUsed = maxValueToSpend > 0 ? (item.value / maxValueToSpend) * 100 : 0;
+    // Calculate percentage of total income instead of total expenses
+    const totalPercentage = totalIncomes > 0 ? (item.value / totalIncomes) * 100 : 0;
+
+    return {
+      ...item,
+      maxValueToSpend,
+      percentageUsed,
+      totalPercentage
+    };
+  });
 
   return (
     <Card className="border-0 shadow-card h-100">
@@ -200,7 +234,7 @@ export function ExpensesByCategoryChart() {
         </ResponsiveContainer>
 
         <div
-          className="text-center mt-3 p-2"
+          className="text-center mt-3 p-2 mb-4"
           style={{
             background:
               "linear-gradient(135deg, rgba(220, 53, 69, 0.05) 0%, rgba(244, 92, 67, 0.05) 100%)",
@@ -211,6 +245,63 @@ export function ExpensesByCategoryChart() {
           }}
         >
           💸 Total: {formatCurrency(totalExpenses)}
+        </div>
+
+        {/* Category expense list table */}
+        <div className="mt-4">
+          <h6 className="fw-bold mb-3">Detalhamento por Categoria</h6>
+          <div className="table-responsive">
+            <Table
+              className="table-sm mb-0"
+              style={{
+                borderRadius: "8px",
+                overflow: "hidden",
+                borderCollapse: "separate",
+                borderSpacing: "0",
+              }}
+            >
+              <thead
+                style={{
+                  background: "linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%)",
+                  color: "white",
+                }}
+              >
+                <tr>
+                  <th className="py-2 px-3">Categoria</th>
+                  <th className="py-2 px-3">Gasto (R$)</th>
+                  <th className="py-2 px-3">Devo Gastar (R$)</th>
+                  <th className="py-2 px-3">% Utilizado</th>
+                  <th className="py-2 px-3">% do Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {categoryListData.map((item, index) => {
+                  const isOverLimit = item.percentageUsed > 100;
+                  return (
+                    <tr
+                      key={index}
+                      style={{
+                        backgroundColor: index % 2 === 0 ? "rgba(0,0,0,0.03)" : "white",
+                      }}
+                    >
+                      <td className="py-2 px-3 fw-medium">{item.name}</td>
+                      <td className="py-2 px-3">{formatCurrency(item.value)}</td>
+                      <td className="py-2 px-3">{formatCurrency(item.maxValueToSpend)}</td>
+                      <td
+                        className="py-2 px-3 fw-semibold"
+                        style={{
+                          color: isOverLimit ? "#dc3545" : "#28a745",
+                        }}
+                      >
+                        {item.percentageUsed.toFixed(2)}%
+                      </td>
+                      <td className="py-2 px-3">{item.totalPercentage.toFixed(2)}%</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </Table>
+          </div>
         </div>
       </Card.Body>
     </Card>
