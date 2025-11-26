@@ -81,6 +81,12 @@ export default function SettingsPage() {
     periodCards: true,
     charts: true,
     recentTransactions: true,
+    // Individual chart settings
+    expensesByCategory: true,
+    incomeVsExpense: true,
+    recurringVsVariable: true,
+    futureProjection: true,
+    financialStats: true,
   });
 
   // Carregar configurações do banco de dados
@@ -906,6 +912,84 @@ export default function SettingsPage() {
                           Inclui: Despesas por Categoria, Despesas Fixas vs
                           Variáveis, Evolução do Saldo
                         </small>
+
+                        {/* Sub-options for individual charts */}
+                        {dashboardCards.charts && (
+                          <div className="mt-3 ms-4">
+                            <Row className="g-2">
+                              <Col xs={12} md={6}>
+                                <Form.Check
+                                  type="checkbox"
+                                  id="dashboard-recurringVsVariable"
+                                  label="Despesas Fixas vs Variáveis"
+                                  checked={
+                                    dashboardCards.recurringVsVariable ?? true
+                                  }
+                                  onChange={(e) =>
+                                    setDashboardCards({
+                                      ...dashboardCards,
+                                      recurringVsVariable: e.target.checked,
+                                    })
+                                  }
+                                  className="mb-2"
+                                />
+                              </Col>
+
+                              <Col xs={12} md={6}>
+                                <Form.Check
+                                  type="checkbox"
+                                  id="dashboard-futureProjection"
+                                  label="Projeção Financeira"
+                                  checked={
+                                    dashboardCards.futureProjection ?? true
+                                  }
+                                  onChange={(e) =>
+                                    setDashboardCards({
+                                      ...dashboardCards,
+                                      futureProjection: e.target.checked,
+                                    })
+                                  }
+                                  className="mb-2"
+                                />
+                              </Col>
+
+                              <Col xs={12} md={6}>
+                                <Form.Check
+                                  type="checkbox"
+                                  id="dashboard-expensesByCategory"
+                                  label="Despesas por Categoria"
+                                  checked={
+                                    dashboardCards.expensesByCategory ?? true
+                                  }
+                                  onChange={(e) =>
+                                    setDashboardCards({
+                                      ...dashboardCards,
+                                      expensesByCategory: e.target.checked,
+                                    })
+                                  }
+                                  className="mb-2"
+                                />
+                              </Col>
+                              <Col xs={12} md={6}>
+                                <Form.Check
+                                  type="checkbox"
+                                  id="dashboard-incomeVsExpense"
+                                  label="Receitas vs Despesas"
+                                  checked={
+                                    dashboardCards.incomeVsExpense ?? true
+                                  }
+                                  onChange={(e) =>
+                                    setDashboardCards({
+                                      ...dashboardCards,
+                                      incomeVsExpense: e.target.checked,
+                                    })
+                                  }
+                                  className="mb-2"
+                                />
+                              </Col>
+                            </Row>
+                          </div>
+                        )}
                       </div>
                     </Col>
                   </Row>
