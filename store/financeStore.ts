@@ -14,6 +14,7 @@ interface FinanceStore extends FinanceData {
   recurringTransactions: RecurringTransaction[];
   categoryLimits: Record<string, { maxPercentage?: number; maxValue?: number }>;
   hiddenDefaultCategories: string[];
+  excludedPredictedIds: string[];
   setCurrentMonth: (month: string) => void;
   createNewMonth: (month: string, copyFromPrevious?: boolean) => Promise<void>;
   getAvailableMonths: () => string[];
@@ -36,8 +37,50 @@ interface FinanceStore extends FinanceData {
 }
 
 const getCurrentMonth = () => {
+  // Sempre retorna o mês atual para SSR
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+};
+
+// Carregar mês salvo do localStorage (apenas no cliente)
+const loadSavedMonth = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  try {
+    return localStorage.getItem('currentMonth');
+  } catch {
+    return null;
+  }
+};
+
+// Salvar mês atual no localStorage
+const saveCurrentMonth = (month: string) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem('currentMonth', month);
+  } catch (error) {
+    console.error('Error saving current month:', error);
+  }
+};
+
+// Carregar exclusões do localStorage
+const loadExcludedIds = (): string[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const stored = localStorage.getItem('excludedPredictedIds');
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+// Salvar exclusões no localStorage
+const saveExcludedIds = (ids: string[]) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem('excludedPredictedIds', JSON.stringify(ids));
+  } catch (error) {
+    console.error('Error saving excluded IDs:', error);
+  }
 };
 
 export const useFinanceStore = create<FinanceStore>((set, get) => ({
@@ -49,10 +92,13 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
   currentMonth: getCurrentMonth(),
   monthsData: {},
   recurringTransactions: [],
+  excludedPredictedIds: loadExcludedIds(),
 
   setCurrentMonth: (month: string) => {
     const state = get();
     const monthData = state.monthsData[month];
+    
+    saveCurrentMonth(month); // Salvar no localStorage
     
     if (monthData) {
       set({ 
@@ -243,7 +289,15 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
         });
       }
 
+      // Filtrar transações previstas que foram excluídas antes de adicionar
+      const excludedIds = get().excludedPredictedIds;
+      
       predictedTransactions.forEach((t) => {
+        // Pular se foi excluída pelo usuário
+        if (excludedIds.includes(t.id)) {
+          return;
+        }
+        
         const month = t.date.substring(0, 7);
         if (!monthsData[month]) {
           monthsData[month] = { transactions: [] };
@@ -282,10 +336,14 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
         monthsData[currentMonth] = { transactions: [] };
       }
 
+      // Restaurar o mês salvo se existir
+      const savedMonth = loadSavedMonth();
+      const monthToUse = savedMonth && monthsData[savedMonth] ? savedMonth : currentMonth;
+
       set({
         monthsData,
-        currentMonth,
-        transactions: monthsData[currentMonth]?.transactions || [],
+        currentMonth: monthToUse,
+        transactions: monthsData[monthToUse]?.transactions || [],
         categories,
         categoryLimits,
         hiddenDefaultCategories,
@@ -382,6 +440,33 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
   },
 
   deleteTransaction: async (id) => {
+    const state = get();
+    const transaction = state.transactions.find((t) => t.id === id);
+    
+    // Se for uma transação prevista, apenas adicionar à lista de exclusões
+    if (transaction?.is_predicted) {
+      const newExcludedIds = [...state.excludedPredictedIds, id];
+      saveExcludedIds(newExcludedIds); // Persistir no localStorage
+      
+      set(() => ({
+        excludedPredictedIds: newExcludedIds,
+      }));
+      
+      // Remover da lista atual também
+      const updatedTransactions = state.transactions.filter((t) => t.id !== id);
+      set((state) => ({
+        transactions: updatedTransactions,
+        monthsData: {
+          ...state.monthsData,
+          [state.currentMonth]: { transactions: updatedTransactions },
+        },
+      }));
+      
+      showSuccessToast("Transação prevista removida");
+      return;
+    }
+    
+    // Se for uma transação real, deletar do banco
     const supabaseClient = createClient();
     const { error } = await supabaseClient
       .from('transactions')
@@ -394,7 +479,6 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       return;
     }
 
-    const state = get();
     const updatedTransactions = state.transactions.filter((t) => t.id !== id);
 
     set((state) => ({
@@ -404,6 +488,8 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
         [state.currentMonth]: { transactions: updatedTransactions },
       },
     }));
+    
+    showSuccessToast("Transação deletada com sucesso!");
   },
 
   convertPredictedToReal: async (predictedTransaction, edits = {}) => {
@@ -875,7 +961,9 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       }
     });
 
-    return predicted;
+    // Filtrar as transações que foram excluídas pelo usuário
+    const excludedIds = get().excludedPredictedIds;
+    return predicted.filter(p => !excludedIds.includes(p.id));
   },
 }));
 

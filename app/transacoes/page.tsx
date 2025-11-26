@@ -176,8 +176,8 @@ export default function TransactionsPage() {
     (t) => t.is_predicted
   );
 
-  // Para a aba de previsões, incluir TODAS as transações do mês
-  const allPredictedTransactions = currentTransactions;
+  // Para os cards, separar previstas (não confirmadas) de todas as transações
+  const allPredictedTransactions = predictedTransactions;
 
   const predictedIncome = allPredictedTransactions
     .filter((t) => t.type === "income")

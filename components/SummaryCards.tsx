@@ -62,76 +62,77 @@ export function SummaryCards({ dashboardConfig }: SummaryCardsProps) {
 
   const monthData = monthsData[currentMonth];
   const currentTransactions = monthData?.transactions || [];
-  const activeRecurring = recurringTransactions.filter((t) => t.is_active);
 
-  const normalTransactions = currentTransactions.filter((t) => !t.is_predicted);
-  const totalIncome = normalTransactions
+  // Separar transações confirmadas e previstas
+  const confirmedTransactions = currentTransactions.filter(
+    (t) => !t.is_predicted
+  );
+  const predictedTransactions = currentTransactions.filter(
+    (t) => t.is_predicted
+  );
+
+  // Calcular totais de transações confirmadas
+  const totalIncome = confirmedTransactions
     .filter((t) => t.type === "income")
     .reduce((sum, t) => sum + t.value, 0);
 
-  const totalExpense = normalTransactions
+  const totalExpense = confirmedTransactions
     .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + t.value, 0);
 
-  const recurringIncome = activeRecurring
+  // Calcular totais de transações previstas (não confirmadas)
+  const predictedIncome = predictedTransactions
     .filter((t) => t.type === "income")
     .reduce((sum, t) => sum + t.value, 0);
 
-  const recurringExpense = activeRecurring
+  const predictedExpense = predictedTransactions
     .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + t.value, 0);
 
-  const totalIncomeWithRecurring = totalIncome + recurringIncome;
-  const totalExpenseWithRecurring = totalExpense + recurringExpense;
+  // Totais incluindo previstas
+  const totalIncomeWithRecurring = totalIncome + predictedIncome;
+  const totalExpenseWithRecurring = totalExpense + predictedExpense;
   const balance = totalIncomeWithRecurring - totalExpenseWithRecurring;
 
-  const expenseTransactionsPeriod1 = normalTransactions.filter((t) => {
+  const expenseTransactionsPeriod1 = currentTransactions.filter((t) => {
     if (t.type !== "expense") return false;
     const day = parseInt(t.date.split("-")[2], 10);
     return day <= period1End;
   });
-  const expenseTransactionsPeriod2 = normalTransactions.filter((t) => {
+  const expenseTransactionsPeriod2 = currentTransactions.filter((t) => {
     if (t.type !== "expense") return false;
     const day = parseInt(t.date.split("-")[2], 10);
     return day >= period2Start;
   });
-  const expenseRecurringPeriod1 = activeRecurring.filter(
-    (t) => t.type === "expense" && t.day_of_month <= period1End
+
+  const totalExpensePeriod1 = expenseTransactionsPeriod1.reduce(
+    (sum, t) => sum + t.value,
+    0
   );
-  const expenseRecurringPeriod2 = activeRecurring.filter(
-    (t) => t.type === "expense" && t.day_of_month >= period2Start
+  const totalExpensePeriod2 = expenseTransactionsPeriod2.reduce(
+    (sum, t) => sum + t.value,
+    0
   );
 
-  const totalExpensePeriod1 =
-    expenseTransactionsPeriod1.reduce((sum, t) => sum + t.value, 0) +
-    expenseRecurringPeriod1.reduce((sum, t) => sum + t.value, 0);
-  const totalExpensePeriod2 =
-    expenseTransactionsPeriod2.reduce((sum, t) => sum + t.value, 0) +
-    expenseRecurringPeriod2.reduce((sum, t) => sum + t.value, 0);
-
-  const incomeTransactionsPeriod1 = normalTransactions.filter((t) => {
+  const incomeTransactionsPeriod1 = currentTransactions.filter((t) => {
     if (t.type !== "income") return false;
     const day = parseInt(t.date.split("-")[2], 10);
     return day <= period1End;
   });
-  const incomeTransactionsPeriod2 = normalTransactions.filter((t) => {
+  const incomeTransactionsPeriod2 = currentTransactions.filter((t) => {
     if (t.type !== "income") return false;
     const day = parseInt(t.date.split("-")[2], 10);
     return day >= period2Start;
   });
-  const incomeRecurringPeriod1 = activeRecurring.filter(
-    (t) => t.type === "income" && t.day_of_month <= period1End
-  );
-  const incomeRecurringPeriod2 = activeRecurring.filter(
-    (t) => t.type === "income" && t.day_of_month >= period2Start
-  );
 
-  const totalIncomePeriod1 =
-    incomeTransactionsPeriod1.reduce((sum, t) => sum + t.value, 0) +
-    incomeRecurringPeriod1.reduce((sum, t) => sum + t.value, 0);
-  const totalIncomePeriod2 =
-    incomeTransactionsPeriod2.reduce((sum, t) => sum + t.value, 0) +
-    incomeRecurringPeriod2.reduce((sum, t) => sum + t.value, 0);
+  const totalIncomePeriod1 = incomeTransactionsPeriod1.reduce(
+    (sum, t) => sum + t.value,
+    0
+  );
+  const totalIncomePeriod2 = incomeTransactionsPeriod2.reduce(
+    (sum, t) => sum + t.value,
+    0
+  );
 
   return (
     <>
@@ -154,16 +155,11 @@ export function SummaryCards({ dashboardConfig }: SummaryCardsProps) {
                       {formatCurrency(totalIncomeWithRecurring)}
                     </h2>
                     <small className="text-white opacity-75">
-                      {
-                        normalTransactions.filter((t) => t.type === "income")
-                          .length
-                      }{" "}
-                      pontuais +{" "}
-                      {
-                        activeRecurring.filter((t) => t.type === "income")
-                          .length
-                      }{" "}
-                      recorrentes
+                      Confirmadas: {formatCurrency(totalIncome)}
+                    </small>
+                    <br />
+                    <small className="text-white opacity-75">
+                      Previstas: {formatCurrency(predictedIncome)}
                     </small>
                   </div>
                   <div
@@ -202,16 +198,11 @@ export function SummaryCards({ dashboardConfig }: SummaryCardsProps) {
                       {formatCurrency(totalExpenseWithRecurring)}
                     </h2>
                     <small className="text-white opacity-75">
-                      {
-                        normalTransactions.filter((t) => t.type === "expense")
-                          .length
-                      }{" "}
-                      pontuais +{" "}
-                      {
-                        activeRecurring.filter((t) => t.type === "expense")
-                          .length
-                      }{" "}
-                      recorrentes
+                      Confirmadas: {formatCurrency(totalExpense)}
+                    </small>
+                    <br />
+                    <small className="text-white opacity-75">
+                      Previstas: {formatCurrency(predictedExpense)}
                     </small>
                   </div>
                   <div
