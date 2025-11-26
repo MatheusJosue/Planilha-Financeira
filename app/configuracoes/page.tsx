@@ -469,7 +469,7 @@ export default function SettingsPage() {
       </div>
 
       <Row className="g-3 g-md-4">
-        <Col xs={12} lg={6}>
+        <Col xs={6} lg={6}>
           <Card
             className="border-0 shadow-card h-100"
             style={{ overflow: "hidden" }}
@@ -489,8 +489,7 @@ export default function SettingsPage() {
                   <FiDownload size={24} className="text-white" />
                 </div>
                 <div>
-                  <h5 className="mb-0 fw-bold">Backup de Dados</h5>
-                  <small className="text-muted">Exportar transações</small>
+                  <h5 className="mb-0 fw-bold">Exportar Backup</h5>
                 </div>
               </div>
               <Card.Text className="text-muted mb-3">
@@ -516,7 +515,7 @@ export default function SettingsPage() {
           </Card>
         </Col>
 
-        <Col xs={12} lg={6}>
+        <Col xs={6} lg={6}>
           <Card
             className="border-0 shadow-card h-100"
             style={{ overflow: "hidden" }}
@@ -536,8 +535,7 @@ export default function SettingsPage() {
                   <FiUpload size={24} className="text-white" />
                 </div>
                 <div>
-                  <h5 className="mb-0 fw-bold">Importar Dados</h5>
-                  <small className="text-muted">Restaurar backup</small>
+                  <h5 className="mb-0 fw-bold">Restaurar backup</h5>
                 </div>
               </div>
               <Card.Text className="text-muted mb-3">
@@ -564,7 +562,7 @@ export default function SettingsPage() {
                 }}
               >
                 <FiUpload size={18} />
-                <span>Selecionar Arquivo</span>
+                <span>Importar dados</span>
               </Button>
             </Card.Body>
           </Card>
@@ -588,9 +586,6 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h5 className="mb-0 fw-bold">Períodos de Pagamento</h5>
-                  <small className="text-muted">
-                    Configure a separação de contas por períodos mensais
-                  </small>
                 </div>
               </div>
 
@@ -751,18 +746,13 @@ export default function SettingsPage() {
               </div>
 
               <div className="mb-3">
-                <p className="text-muted small mb-4">
-                  Selecione os cards e seções que deseja visualizar na página
-                  inicial:
-                </p>
-
                 {/* Seção: Cards de Resumo */}
                 <div className="mb-4">
                   <h6
                     className="fw-bold mb-3"
                     style={{ color: "var(--foreground)" }}
                   >
-                    💳 Cards de Resumo Mensal
+                    Resumo Mensal
                   </h6>
                   <Row className="g-3">
                     <Col xs={12} md={4}>
@@ -787,9 +777,6 @@ export default function SettingsPage() {
                           }
                           className="fw-semibold"
                         />
-                        <small className="text-muted ms-4 d-block mt-1">
-                          Total de receitas do mês
-                        </small>
                       </div>
                     </Col>
 
@@ -815,9 +802,6 @@ export default function SettingsPage() {
                           }
                           className="fw-semibold"
                         />
-                        <small className="text-muted ms-4 d-block mt-1">
-                          Total de despesas do mês
-                        </small>
                       </div>
                     </Col>
 
@@ -843,54 +827,44 @@ export default function SettingsPage() {
                           }
                           className="fw-semibold"
                         />
-                        <small className="text-muted ms-4 d-block mt-1">
-                          Saldo total do mês atual
-                        </small>
                       </div>
                     </Col>
                   </Row>
                 </div>
 
-                {/* Seção: Cards por Período */}
+                {/* Seção: Estatísticas */}
                 <div className="mb-4">
                   <h6
                     className="fw-bold mb-3"
                     style={{ color: "var(--foreground)" }}
                   >
-                    📅 Cards por Período de Pagamento
+                    📈 Estatísticas Financeiras
                   </h6>
                   <Row className="g-3">
                     <Col xs={12}>
                       <div
                         className="p-3"
                         style={{
-                          background: periodSeparationEnabled
-                            ? "rgba(102, 126, 234, 0.05)"
-                            : "rgba(108, 117, 125, 0.05)",
+                          background: "rgba(23, 162, 184, 0.05)",
                           borderRadius: "10px",
-                          border: periodSeparationEnabled
-                            ? "2px solid rgba(102, 126, 234, 0.2)"
-                            : "2px solid rgba(108, 117, 125, 0.2)",
+                          border: "2px solid rgba(23, 162, 184, 0.2)",
                         }}
                       >
                         <Form.Check
                           type="checkbox"
-                          id="dashboard-periods"
-                          label="📅 1º Período e 2º Período"
-                          checked={dashboardCards.periodCards}
+                          id="dashboard-recent"
+                          label="🕒 Transações Recentes e Estatísticas"
+                          checked={dashboardCards.recentTransactions}
                           onChange={(e) =>
                             setDashboardCards({
                               ...dashboardCards,
-                              periodCards: e.target.checked,
+                              recentTransactions: e.target.checked,
                             })
                           }
                           className="fw-semibold"
-                          disabled={!periodSeparationEnabled}
                         />
                         <small className="text-muted ms-4 d-block mt-1">
-                          {periodSeparationEnabled
-                            ? "Exibe cards separados por período de pagamento"
-                            : "⚠️ Ative a separação de períodos na seção acima para usar esta opção"}
+                          Lista das últimas transações e estatísticas gerais
                         </small>
                       </div>
                     </Col>
@@ -937,45 +911,6 @@ export default function SettingsPage() {
                   </Row>
                 </div>
 
-                {/* Seção: Estatísticas */}
-                <div className="mb-4">
-                  <h6
-                    className="fw-bold mb-3"
-                    style={{ color: "var(--foreground)" }}
-                  >
-                    📈 Estatísticas Financeiras
-                  </h6>
-                  <Row className="g-3">
-                    <Col xs={12}>
-                      <div
-                        className="p-3"
-                        style={{
-                          background: "rgba(23, 162, 184, 0.05)",
-                          borderRadius: "10px",
-                          border: "2px solid rgba(23, 162, 184, 0.2)",
-                        }}
-                      >
-                        <Form.Check
-                          type="checkbox"
-                          id="dashboard-recent"
-                          label="🕒 Transações Recentes e Estatísticas"
-                          checked={dashboardCards.recentTransactions}
-                          onChange={(e) =>
-                            setDashboardCards({
-                              ...dashboardCards,
-                              recentTransactions: e.target.checked,
-                            })
-                          }
-                          className="fw-semibold"
-                        />
-                        <small className="text-muted ms-4 d-block mt-1">
-                          Lista das últimas transações e estatísticas gerais
-                        </small>
-                      </div>
-                    </Col>
-                  </Row>
-                </div>
-
                 <div className="text-center mt-4">
                   <Button
                     onClick={saveUserSettings}
@@ -992,6 +927,67 @@ export default function SettingsPage() {
                     💾 Salvar Configurações
                   </Button>
                 </div>
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+
+        {/* Seção: Cards por Período */}
+        <Col xs={12}>
+          <Card className="border-0 shadow-card">
+            <Card.Body className="p-3 p-md-4">
+              <div className="d-flex align-items-center gap-3 mb-4">
+                <div
+                  className="d-flex align-items-center justify-content-center"
+                  style={{
+                    width: "50px",
+                    height: "50px",
+                    borderRadius: "12px",
+                    background:
+                      "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+                  }}
+                >
+                  <span style={{ fontSize: "24px" }}>📅</span>
+                </div>
+                <div>
+                  <h5 className="mb-0 fw-bold">Cards por Período</h5>
+                  <small className="text-muted">
+                    Exibir cards separados por período de pagamento
+                  </small>
+                </div>
+              </div>
+
+              <div
+                className="p-3"
+                style={{
+                  background: periodSeparationEnabled
+                    ? "rgba(79, 172, 254, 0.05)"
+                    : "rgba(108, 117, 125, 0.05)",
+                  borderRadius: "10px",
+                  border: periodSeparationEnabled
+                    ? "2px solid rgba(79, 172, 254, 0.2)"
+                    : "2px solid rgba(108, 117, 125, 0.2)",
+                }}
+              >
+                <Form.Check
+                  type="checkbox"
+                  id="dashboard-periods"
+                  label="📅 Exibir cards de 1º Período e 2º Período"
+                  checked={dashboardCards.periodCards}
+                  onChange={(e) =>
+                    setDashboardCards({
+                      ...dashboardCards,
+                      periodCards: e.target.checked,
+                    })
+                  }
+                  className="fw-semibold"
+                  disabled={!periodSeparationEnabled}
+                />
+                <small className="text-muted ms-4 d-block mt-1">
+                  {periodSeparationEnabled
+                    ? "Exibe cards separados por período de pagamento"
+                    : "⚠️ Ative a separação de períodos acima para usar esta opção"}
+                </small>
               </div>
             </Card.Body>
           </Card>
