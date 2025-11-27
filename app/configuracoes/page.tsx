@@ -54,8 +54,6 @@ export default function SettingsPage() {
     transactions,
     categories,
     categoryLimits,
-    recurringTransactions,
-    monthsData,
     addCategory,
     deleteCategory,
     importData,
@@ -629,7 +627,7 @@ export default function SettingsPage() {
                 </div>
                 <small className="text-muted ms-4 ps-2 d-block mt-1">
                   {periodSeparationEnabled
-                    ? "Suas transações serão organizadas em dois períodos mensais diferentes (ex: dia 10 e dia 20)"
+                    ? "Organize suas transações em dois períodos mensais diferentes (ex: dia 10 e dia 20)"
                     : "Ative para organizar suas contas em dois períodos mensais diferentes"}
                 </small>
               </div>
@@ -700,6 +698,34 @@ export default function SettingsPage() {
                       </Form.Group>
                     </Col>
                   </Row>
+
+                  {/* Opção para exibir cards por período */}
+                  <div
+                    className="mt-3 p-3"
+                    style={{
+                      background: "rgba(79, 172, 254, 0.05)",
+                      borderRadius: "10px",
+                      border: "2px solid rgba(79, 172, 254, 0.2)",
+                    }}
+                  >
+                    <Form.Check
+                      type="checkbox"
+                      id="dashboard-periods"
+                      label="📅 Exibir finanças separadamente no dashboard"
+                      checked={dashboardCards.periodCards}
+                      onChange={(e) =>
+                        setDashboardCards({
+                          ...dashboardCards,
+                          periodCards: e.target.checked,
+                        })
+                      }
+                      className="fw-semibold"
+                    />
+                    <small className="text-muted ms-4 d-block mt-1">
+                      Exibe cards com informações financeiras separadas por período de pagamento
+                    </small>
+                  </div>
+
                   <div className="text-center mt-3">
                     <Button
                       onClick={saveUserSettings}
@@ -1010,67 +1036,6 @@ export default function SettingsPage() {
                     💾 Salvar Configurações
                   </Button>
                 </div>
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-
-        {/* Seção: Cards por Período */}
-        <Col xs={12}>
-          <Card className="border-0 shadow-card">
-            <Card.Body className="p-3 p-md-4">
-              <div className="d-flex align-items-center gap-3 mb-4">
-                <div
-                  className="d-flex align-items-center justify-content-center"
-                  style={{
-                    width: "50px",
-                    height: "50px",
-                    borderRadius: "12px",
-                    background:
-                      "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
-                  }}
-                >
-                  <span style={{ fontSize: "24px" }}>📅</span>
-                </div>
-                <div>
-                  <h5 className="mb-0 fw-bold">Cards por Período</h5>
-                  <small className="text-muted">
-                    Exibir cards separados por período de pagamento
-                  </small>
-                </div>
-              </div>
-
-              <div
-                className="p-3"
-                style={{
-                  background: periodSeparationEnabled
-                    ? "rgba(79, 172, 254, 0.05)"
-                    : "rgba(108, 117, 125, 0.05)",
-                  borderRadius: "10px",
-                  border: periodSeparationEnabled
-                    ? "2px solid rgba(79, 172, 254, 0.2)"
-                    : "2px solid rgba(108, 117, 125, 0.2)",
-                }}
-              >
-                <Form.Check
-                  type="checkbox"
-                  id="dashboard-periods"
-                  label="📅 Exibir cards de 1º Período e 2º Período"
-                  checked={dashboardCards.periodCards}
-                  onChange={(e) =>
-                    setDashboardCards({
-                      ...dashboardCards,
-                      periodCards: e.target.checked,
-                    })
-                  }
-                  className="fw-semibold"
-                  disabled={!periodSeparationEnabled}
-                />
-                <small className="text-muted ms-4 d-block mt-1">
-                  {periodSeparationEnabled
-                    ? "Exibe cards separados por período de pagamento"
-                    : "⚠️ Ative a separação de períodos acima para usar esta opção"}
-                </small>
               </div>
             </Card.Body>
           </Card>
