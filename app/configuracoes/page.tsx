@@ -9,8 +9,7 @@ import {
   FiPlus,
   FiCalendar,
   FiLayout,
-  FiEye,
-  FiEyeOff,
+  FiCreditCard,
 } from "react-icons/fi";
 import { useFinanceStore } from "@/store/financeStore";
 import { DEFAULT_CATEGORIES } from "@/types";
@@ -1276,6 +1275,226 @@ export default function SettingsPage() {
                   </div>
                 </div>
               )}
+            </Card.Body>
+          </Card>
+        </Col>
+
+        <Col xs={12}>
+          <Card className="border-0 shadow-card">
+            <Card.Body className="p-3 p-md-4">
+              <div className="d-flex align-items-center gap-3 mb-4">
+                <div
+                  className="d-flex align-items-center justify-content-center"
+                  style={{
+                    width: "50px",
+                    height: "50px",
+                    borderRadius: "12px",
+                    background:
+                      "linear-gradient(135deg, #674eea 0%, #a855f7 100%)",
+                  }}
+                >
+                  <FiCreditCard size={24} className="text-white" />
+                </div>
+                <div>
+                  <h5 className="mb-0 fw-bold">Assinatura do App</h5>
+                  <small className="text-muted">
+                    Gerencie sua assinatura e planos pagos
+                  </small>
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <h6 className="fw-bold mb-3">Plano Atual</h6>
+                <div
+                  className="p-3"
+                  style={{
+                    background: "rgba(103, 78, 234, 0.05)",
+                    borderRadius: "10px",
+                    border: "2px solid rgba(103, 78, 234, 0.2)",
+                  }}
+                >
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div>
+                      <h6 className="mb-0">Plano Básico (Gratuito)</h6>
+                      <p className="mb-0 text-muted small">
+                        Recursos básicos da aplicação
+                      </p>
+                    </div>
+                    <Badge bg="success">Ativo</Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <h6 className="fw-bold mb-3">Planos Disponíveis</h6>
+                <Row className="g-3">
+                  <Col xs={12} md={6}>
+                    <div
+                      className="p-3 border h-100"
+                      style={{
+                        borderRadius: "10px",
+                        border: "2px solid rgba(33, 150, 243, 0.3)",
+                      }}
+                    >
+                      <h6 className="mb-2">Plano Premium</h6>
+                      <p className="text-muted small mb-3">
+                        Recursos avançados e relatórios completos
+                      </p>
+                      <p className="h5 mb-0">
+                        <strong>R$ 29,90</strong> /mês
+                      </p>
+                      <Button
+                        className="w-100 mt-2"
+                        style={{
+                          background:
+                            "linear-gradient(135deg, #2196f3 0%, #1976d2 100%)",
+                          border: "none",
+                          borderRadius: "8px",
+                        }}
+                      >
+                        Assinar Agora
+                      </Button>
+                    </div>
+                  </Col>
+                  <Col xs={12} md={6}>
+                    <div
+                      className="p-3 border h-100"
+                      style={{
+                        borderRadius: "10px",
+                        border: "2px solid rgba(255, 152, 0, 0.3)",
+                      }}
+                    >
+                      <h6 className="mb-2">Plano Pro</h6>
+                      <p className="text-muted small mb-3">
+                        Todos os recursos + suporte prioritário
+                      </p>
+                      <p className="h5 mb-0">
+                        <strong>R$ 59,90</strong> /mês
+                      </p>
+                      <Button
+                        className="w-100 mt-2"
+                        style={{
+                          background:
+                            "linear-gradient(135deg, #ff9800 0%, #f57c00 100%)",
+                          border: "none",
+                          borderRadius: "8px",
+                        }}
+                      >
+                        Assinar Agora
+                      </Button>
+                    </div>
+                  </Col>
+                </Row>
+              </div>
+
+              <div className="mb-3">
+                <h6 className="fw-bold mb-3">Método de Pagamento</h6>
+                <div
+                  className="p-3"
+                  style={{
+                    background: "rgba(103, 78, 234, 0.05)",
+                    borderRadius: "10px",
+                    border: "2px solid rgba(103, 78, 234, 0.2)",
+                  }}
+                >
+                  <Form.Group className="mb-3">
+                    <Form.Label className="fw-semibold">
+                      Nome no Cartão
+                    </Form.Label>
+                    <Form.Control
+                      type="text"
+                      placeholder="Nome conforme impresso no cartão"
+                      autoComplete="cc-name"
+                      style={{
+                        borderRadius: "10px",
+                        border: "2px solid #e2e8f0",
+                        padding: "12px",
+                      }}
+                    />
+                  </Form.Group>
+
+                  <Form.Group className="mb-3">
+                    <Form.Label className="fw-semibold">
+                      Número do Cartão
+                    </Form.Label>
+                    <Form.Control
+                      type="text"
+                      placeholder="•••• •••• •••• ••••"
+                      autoComplete="cc-number"
+                      style={{
+                        borderRadius: "10px",
+                        border: "2px solid #e2e8f0",
+                        padding: "12px",
+                      }}
+                    />
+                  </Form.Group>
+
+                  <Row className="g-3">
+                    <Col xs={6}>
+                      <Form.Group>
+                        <Form.Label className="fw-semibold">
+                          Validade (MM/AA)
+                        </Form.Label>
+                        <Form.Control
+                          type="text"
+                          placeholder="MM/AA"
+                          autoComplete="cc-exp"
+                          style={{
+                            borderRadius: "10px",
+                            border: "2px solid #e2e8f0",
+                            padding: "12px",
+                          }}
+                        />
+                      </Form.Group>
+                    </Col>
+                    <Col xs={6}>
+                      <Form.Group>
+                        <Form.Label className="fw-semibold">CVV</Form.Label>
+                        <Form.Control
+                          type="text"
+                          placeholder="•••"
+                          autoComplete="cc-csc"
+                          style={{
+                            borderRadius: "10px",
+                            border: "2px solid #e2e8f0",
+                            padding: "12px",
+                          }}
+                        />
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+                  <Form.Group className="mt-3">
+                    <Form.Label className="fw-semibold">
+                      CPF do Titular (opcional)
+                    </Form.Label>
+                    <Form.Control
+                      type="text"
+                      placeholder="CPF do titular do cartão"
+                      autoComplete="off"
+                      style={{
+                        borderRadius: "10px",
+                        border: "2px solid #e2e8f0",
+                        padding: "12px",
+                      }}
+                    />
+                  </Form.Group>
+
+                  <Button
+                    className="w-100 mt-3"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, #674eea 0%, #a855f7 100%)",
+                      border: "none",
+                      borderRadius: "10px",
+                      padding: "12px",
+                      fontWeight: "600",
+                    }}
+                  >
+                    Salvar Método de Pagamento
+                  </Button>
+                </div>
+              </div>
             </Card.Body>
           </Card>
         </Col>
