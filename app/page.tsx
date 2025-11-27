@@ -58,7 +58,10 @@ export default function DashboardPage() {
       if (settings?.dashboard_config) {
         setDashboardConfig(settings.dashboard_config);
       }
-      console.log("Carregando configurações do dashboard:", settings?.dashboard_config);
+      console.log(
+        "Carregando configurações do dashboard:",
+        settings?.dashboard_config
+      );
     } catch (error) {
       console.error("Erro ao carregar configurações do dashboard:", error);
     }
@@ -82,15 +85,13 @@ export default function DashboardPage() {
       } = await supabaseClient.auth.getUser();
 
       if (user) {
-        const { error } = await supabaseClient
-          .from("user_settings")
-          .upsert(
-            {
-              user_id: user.id,
-              dashboard_config: updatedConfig,
-            },
-            { onConflict: "user_id" }
-          );
+        const { error } = await supabaseClient.from("user_settings").upsert(
+          {
+            user_id: user.id,
+            dashboard_config: updatedConfig,
+          },
+          { onConflict: "user_id" }
+        );
 
         if (error) {
           console.error("Erro ao salvar configurações do dashboard:", error);
@@ -120,7 +121,66 @@ export default function DashboardPage() {
               <Col lg={8}>
                 <Row className="g-4">
                   <Col lg={12}>
-                    {dashboardConfig.recurringVsVariable && dashboardConfig.charts && (
+                    {dashboardConfig.expensesByCategory &&
+                      dashboardConfig.charts && (
+                        <Col lg={12}>
+                          <div
+                            className="animate-fade-in h-100"
+                            style={{ animationDelay: "0.5s" }}
+                          >
+                            <ChartWrapper
+                              title="Despesas por Categoria"
+                              configKey="expensesByCategory"
+                              onRemove={handleChartRemove}
+                            >
+                              <ExpensesByCategoryChart />
+                            </ChartWrapper>
+                          </div>
+                        </Col>
+                      )}
+                  </Col>
+                  {dashboardConfig.recentTransactions &&
+                    dashboardConfig.financialStats &&
+                    dashboardConfig.charts && (
+                      <Col lg={12}>
+                        <div
+                          className="animate-fade-in"
+                          style={{ animationDelay: "0.7s" }}
+                        >
+                          <ChartWrapper
+                            title="Estatísticas Financeiras"
+                            configKey="financialStats"
+                            onRemove={handleChartRemove}
+                          >
+                            <FinancialStats />
+                          </ChartWrapper>
+                        </div>
+                      </Col>
+                    )}
+                  {dashboardConfig.futureProjection &&
+                    dashboardConfig.charts && (
+                      <Col lg={12}>
+                        <div
+                          className="animate-fade-in"
+                          style={{ animationDelay: "0.4s" }}
+                        >
+                          <ChartWrapper
+                            title="Projeção Futura"
+                            configKey="futureProjection"
+                            onRemove={handleChartRemove}
+                          >
+                            <FutureProjectionChart />
+                          </ChartWrapper>
+                        </div>
+                      </Col>
+                    )}
+                </Row>
+              </Col>
+
+              <Col lg={4}>
+                <Row className="g-4">
+                  {dashboardConfig.recurringVsVariable &&
+                    dashboardConfig.charts && (
                       <div
                         className="animate-fade-in"
                         style={{ animationDelay: "0.3s" }}
@@ -134,76 +194,24 @@ export default function DashboardPage() {
                         </ChartWrapper>
                       </div>
                     )}
-                  </Col>
-                  {dashboardConfig.recentTransactions && dashboardConfig.financialStats && dashboardConfig.charts && (
-                    <Col lg={12}>
-                      <div
-                        className="animate-fade-in"
-                        style={{ animationDelay: "0.7s" }}
-                      >
-                        <ChartWrapper
-                          title="Estatísticas Financeiras"
-                          configKey="financialStats"
-                          onRemove={handleChartRemove}
-                        >
-                          <FinancialStats />
-                        </ChartWrapper>
-                      </div>
-                    </Col>
-                  )}
-                  {dashboardConfig.futureProjection && dashboardConfig.charts && (
-                    <Col lg={12}>
-                      <div
-                        className="animate-fade-in"
-                        style={{ animationDelay: "0.4s" }}
-                      >
-                        <ChartWrapper
-                          title="Projeção Futura"
-                          configKey="futureProjection"
-                          onRemove={handleChartRemove}
-                        >
-                          <FutureProjectionChart />
-                        </ChartWrapper>
-                      </div>
-                    </Col>
-                  )}
-                </Row>
-              </Col>
 
-              <Col lg={4}>
-                <Row className="g-4">
-                  {dashboardConfig.expensesByCategory && dashboardConfig.charts && (
-                    <Col lg={12}>
-                      <div
-                        className="animate-fade-in h-100"
-                        style={{ animationDelay: "0.5s" }}
-                      >
-                        <ChartWrapper
-                          title="Despesas por Categoria"
-                          configKey="expensesByCategory"
-                          onRemove={handleChartRemove}
+                  {dashboardConfig.incomeVsExpense &&
+                    dashboardConfig.charts && (
+                      <Col lg={12}>
+                        <div
+                          className="animate-fade-in h-100"
+                          style={{ animationDelay: "0.6s" }}
                         >
-                          <ExpensesByCategoryChart />
-                        </ChartWrapper>
-                      </div>
-                    </Col>
-                  )}
-                  {dashboardConfig.incomeVsExpense && dashboardConfig.charts && (
-                    <Col lg={12}>
-                      <div
-                        className="animate-fade-in h-100"
-                        style={{ animationDelay: "0.6s" }}
-                      >
-                        <ChartWrapper
-                          title="Receitas vs Despesas"
-                          configKey="incomeVsExpense"
-                          onRemove={handleChartRemove}
-                        >
-                          <IncomeVsExpenseChart />
-                        </ChartWrapper>
-                      </div>
-                    </Col>
-                  )}
+                          <ChartWrapper
+                            title="Receitas vs Despesas"
+                            configKey="incomeVsExpense"
+                            onRemove={handleChartRemove}
+                          >
+                            <IncomeVsExpenseChart />
+                          </ChartWrapper>
+                        </div>
+                      </Col>
+                    )}
                 </Row>
               </Col>
             </Row>
