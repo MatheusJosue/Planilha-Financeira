@@ -12,6 +12,7 @@ import { SelectField } from "@/components/ui/SelectField";
 import { InputField } from "@/components/ui/InputField";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { DateInput } from "@/components/ui/DateInput";
+import { CategoryPicker } from "@/components/CategoryPicker";
 
 interface TransactionFormProps {
   show: boolean;
@@ -51,7 +52,7 @@ export function TransactionForm({
     return {
       description: "",
       type: defaultType || ("expense" as TransactionType),
-      category: categories[0] || "",
+      category: "", // We'll let the CategoryPicker handle the initial category selection
       value: "",
       date: getTodayISO(),
       isRecurring: false,
@@ -60,7 +61,7 @@ export function TransactionForm({
       total_installments: "",
       end_date: "",
     };
-  }, [transaction, categories, defaultType]);
+  }, [transaction, defaultType]);
 
   const [formData, setFormData] = useState(getInitialFormData);
 
@@ -203,14 +204,10 @@ export function TransactionForm({
 
           <Row className="mb-3">
             <Col md={12}>
-              <SelectField
-                label="Categoria"
-                value={formData.category}
-                onChange={(value) =>
-                  setFormData({ ...formData, category: value })
-                }
-                options={categories.map((cat) => ({ value: cat, label: cat }))}
-                required
+              <CategoryPicker
+                categories={categories}
+                selectedCategory={formData.category}
+                onSelect={(category) => setFormData({ ...formData, category })}
               />
             </Col>
           </Row>
@@ -231,9 +228,6 @@ export function TransactionForm({
                     }
                     style={{ color: "var(--foreground)", fontWeight: 500 }}
                   />
-                  <Form.Text style={{ color: "var(--muted-foreground)" }}>
-                    Marque se esta transação se repete mensalmente
-                  </Form.Text>
                 </Form.Group>
               </Col>
             </Row>
