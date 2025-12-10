@@ -13,11 +13,26 @@ import { DashboardSkeleton } from "@/components/DashboardSkeleton";
 import { useFinanceStore } from "@/store/financeStore";
 import { ChartWrapper } from "@/components/ChartWrapper";
 
+// Define the type for dashboard configuration
+type DashboardConfig = {
+  balance: boolean;
+  monthlyIncome: boolean;
+  monthlyExpense: boolean;
+  periodCards: boolean;
+  charts: boolean;
+  recentTransactions: boolean;
+  expensesByCategory: boolean;
+  incomeVsExpense: boolean;
+  recurringVsVariable: boolean;
+  futureProjection: boolean;
+  financialStats: boolean;
+};
+
 export default function DashboardPage() {
   const { isLoaded } = useFinanceStore();
 
   // Configuration state - starts as null to indicate not yet loaded
-  const [dashboardConfig, setDashboardConfig] = useState(null);
+  const [dashboardConfig, setDashboardConfig] = useState<DashboardConfig | null>(null);
   const [configLoadComplete, setConfigLoadComplete] = useState(false);
 
   // Load config first, before rendering the dashboard
@@ -83,8 +98,21 @@ export default function DashboardPage() {
   };
 
   const handleChartRemove = async (chartKey: string) => {
-    const updatedConfig = {
-      ...dashboardConfig,
+    if (!dashboardConfig) return; // Guard clause
+
+    // Explicitly map to ensure all fields remain as boolean
+    const updatedConfig: DashboardConfig = {
+      balance: dashboardConfig.balance,
+      monthlyIncome: dashboardConfig.monthlyIncome,
+      monthlyExpense: dashboardConfig.monthlyExpense,
+      periodCards: dashboardConfig.periodCards,
+      charts: dashboardConfig.charts,
+      recentTransactions: dashboardConfig.recentTransactions,
+      expensesByCategory: dashboardConfig.expensesByCategory,
+      incomeVsExpense: dashboardConfig.incomeVsExpense,
+      recurringVsVariable: dashboardConfig.recurringVsVariable,
+      futureProjection: dashboardConfig.futureProjection,
+      financialStats: dashboardConfig.financialStats,
       [chartKey]: false,
     };
 
@@ -111,13 +139,13 @@ export default function DashboardPage() {
         if (error) {
           console.error("Erro ao salvar configurações do dashboard:", error);
           // Revert the change if saving failed
-          setDashboardConfig(dashboardConfig);
+          if (dashboardConfig) setDashboardConfig(dashboardConfig);
         }
       }
     } catch (error) {
       console.error("Erro ao salvar configurações do dashboard:", error);
       // Revert the change if saving failed
-      setDashboardConfig(dashboardConfig);
+      if (dashboardConfig) setDashboardConfig(dashboardConfig);
     }
   };
 

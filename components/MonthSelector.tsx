@@ -374,14 +374,12 @@ const MonthStats = ({ totalMonths }: MonthStatsProps) => {
 };
 
 export function MonthSelector() {
-  const { currentMonth, setCurrentMonth, createNewMonth, getAvailableMonths, monthsData } =
+  const { currentMonth, setCurrentMonth, createNewMonth, getAvailableMonths, monthsData, showMonthPicker, toggleShowMonthPicker } =
     useFinanceStore();
 
   const [showModal, setShowModal] = useState(false);
   const [newMonthValue, setNewMonthValue] = useState("");
   const [copyPrevious, setCopyPrevious] = useState(false);
-
-  const [showMonthPicker, setShowMonthPicker] = useState(false);
 
 const availableMonths = useMemo(
   () => getAvailableMonths(),
@@ -500,7 +498,7 @@ const availableMonths = useMemo(
 
           <MonthBadge
             currentMonth={currentMonth}
-            onClick={() => setShowMonthPicker(true)}
+            onClick={() => toggleShowMonthPicker(true)}
           />
 
           <NavigationButton
@@ -659,7 +657,7 @@ const availableMonths = useMemo(
 
       <Modal
         show={showMonthPicker}
-        onHide={() => setShowMonthPicker(false)}
+        onHide={() => toggleShowMonthPicker(false)}
         centered
         data-bs-theme="dark"
         aria-labelledby="month-picker-title"
@@ -703,7 +701,7 @@ const availableMonths = useMemo(
                   type="button"
                   onClick={() => {
                     setCurrentMonth(month);
-                    setShowMonthPicker(false);
+                    toggleShowMonthPicker(false);
                   }}
                   className="px-3 py-2"
                   style={{
