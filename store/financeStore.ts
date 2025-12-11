@@ -929,7 +929,6 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     const predicted: Transaction[] = [];
     const today = new Date();
 
-
     state.recurringTransactions.forEach((recurring) => {
       if (!recurring.is_active) {
         return;
@@ -937,7 +936,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
 
       const startDate = new Date(recurring.start_date);
 
-      for (let i = -1; i <= monthsAhead; i++) {
+      for (let i = 0; i <= monthsAhead; i++) {
         const targetDate = new Date(today.getFullYear(), today.getMonth() + i, recurring.day_of_month);
 
         if (targetDate < startDate) continue;
@@ -950,7 +949,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
         }
 
         const month = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`;
-        const dateStr = `${month}-${String(recurring.day_of_month).padStart(2, '0')}`;
+        const dateStr = `${month}-${String(targetDate.getDate()).padStart(2, '0')}`;
 
         // Calculate current installment number for installment type
         const currentInstallment = recurring.recurrence_type === 'installment'
@@ -963,7 +962,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
           description: recurring.recurrence_type === 'installment'
             ? `${recurring.description} (${currentInstallment}/${recurring.total_installments})`
             : recurring.description,
-          type: recurring.type,
+          type: recurring.type as 'income' | 'expense',
           category: recurring.category,
           value: typeof recurring.value === 'string' ? parseFloat(recurring.value) : Number(recurring.value),
           date: dateStr,
@@ -978,8 +977,8 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     });
 
     // Filtrar as transações que foram excluídas pelo usuário
-    const excludedIds = get().excludedPredictedIds;
-    return predicted.filter(p => !excludedIds.includes(p.id));
+    const excludedIds = state.excludedPredictedIds;
+    return predicted.filter(predicted => !excludedIds.includes(predicted.id));
   },
 }));
 

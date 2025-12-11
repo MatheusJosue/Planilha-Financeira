@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Card, Row, Col, Nav, Badge } from "react-bootstrap";
+import { Button, Card, Row, Col, Nav, Badge, Table } from "react-bootstrap";
 import {
   FiPlus,
   FiRepeat,
   FiDollarSign,
   FiTrendingUp,
   FiCalendar,
+  FiEdit,
+  FiTrash2,
 } from "react-icons/fi";
 import { Transaction, RecurringTransaction, TransactionType } from "@/types";
 import { TransactionForm } from "@/components/TransactionForm";
@@ -1265,6 +1267,271 @@ export default function TransactionsPage() {
                       />
                     </div>
                   )}
+
+                  {/* Seção de Transações Recorrentes Configuradas */}
+                  {(() => {
+                    const {
+                      recurringTransactions,
+                      deleteRecurringTransaction,
+                    } = useFinanceStore.getState();
+
+                    return recurringTransactions.length > 0 ? (
+                      <div className="mt-4">
+                        <h5 className="mb-3 d-flex align-items-center gap-2">
+                          <FiRepeat className="text-primary" />
+                          Transações Recorrentes Configuradas
+                          <Badge
+                            bg="primary"
+                            style={{
+                              borderRadius: "8px",
+                              padding: "4px 10px",
+                              fontSize: "0.85rem",
+                            }}
+                          >
+                            {recurringTransactions.length}
+                          </Badge>
+                        </h5>
+                        <div
+                          className="shadow-card"
+                          style={{
+                            borderRadius: "16px",
+                            overflow: "hidden",
+                          }}
+                        >
+                          <Table hover responsive className="align-middle mb-0">
+                            <thead
+                              style={{
+                                background:
+                                  "linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)",
+                                borderBottom: "2px solid #e2e8f0",
+                              }}
+                            >
+                              <tr>
+                                <th
+                                  className="text-center"
+                                  style={{
+                                    padding: "1rem",
+                                    fontWeight: "600",
+                                    fontSize: "0.9rem",
+                                  }}
+                                >
+                                  Ações
+                                </th>
+                                <th
+                                  className="text-start"
+                                  style={{
+                                    padding: "1rem",
+                                    fontWeight: "600",
+                                    fontSize: "0.9rem",
+                                  }}
+                                >
+                                  Descrição
+                                </th>
+                                <th
+                                  style={{
+                                    padding: "1rem",
+                                    fontWeight: "600",
+                                    fontSize: "0.9rem",
+                                  }}
+                                >
+                                  Tipo
+                                </th>
+                                <th
+                                  style={{
+                                    padding: "1rem",
+                                    fontWeight: "600",
+                                    fontSize: "0.9rem",
+                                  }}
+                                >
+                                  Categoria
+                                </th>
+                                <th
+                                  style={{
+                                    padding: "1rem",
+                                    fontWeight: "600",
+                                    fontSize: "0.9rem",
+                                  }}
+                                >
+                                  Valor
+                                </th>
+                                <th
+                                  style={{
+                                    padding: "1rem",
+                                    fontWeight: "600",
+                                    fontSize: "0.9rem",
+                                  }}
+                                >
+                                  Recorrência
+                                </th>
+                                <th
+                                  style={{
+                                    padding: "1rem",
+                                    fontWeight: "600",
+                                    fontSize: "0.9rem",
+                                  }}
+                                >
+                                  Dia Vencimento
+                                </th>
+                                <th
+                                  style={{
+                                    padding: "1rem",
+                                    fontWeight: "600",
+                                    fontSize: "0.9rem",
+                                  }}
+                                >
+                                  Início
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {recurringTransactions.map((transaction) => (
+                                <tr key={transaction.id}>
+                                  <td
+                                    className="text-center"
+                                    style={{ padding: "1rem" }}
+                                  >
+                                    <Button
+                                      variant="outline-primary"
+                                      size="sm"
+                                      className="me-2 mb-1"
+                                      onClick={() =>
+                                        setEditingRecurring(transaction)
+                                      }
+                                      style={{
+                                        borderRadius: "8px",
+                                        padding: "6px 12px",
+                                      }}
+                                      title="Editar"
+                                    >
+                                      <FiEdit />
+                                    </Button>
+                                    <Button
+                                      variant="outline-danger"
+                                      size="sm"
+                                      className="mb-1"
+                                      onClick={() => {
+                                        if (
+                                          confirm(
+                                            "Tem certeza que deseja excluir esta transação recorrente?"
+                                          )
+                                        ) {
+                                          deleteRecurringTransaction(
+                                            transaction.id
+                                          );
+                                        }
+                                      }}
+                                      style={{
+                                        borderRadius: "8px",
+                                        padding: "6px 12px",
+                                      }}
+                                      title="Excluir"
+                                    >
+                                      <FiTrash2 />
+                                    </Button>
+                                  </td>
+                                  <td
+                                    style={{
+                                      padding: "1rem",
+                                      fontWeight: "500",
+                                    }}
+                                  >
+                                    <strong>{transaction.description}</strong>
+                                  </td>
+                                  <td style={{ padding: "1rem" }}>
+                                    <Badge
+                                      bg={
+                                        transaction.type === "income"
+                                          ? "success"
+                                          : "danger"
+                                      }
+                                      style={{
+                                        padding: "6px 12px",
+                                        borderRadius: "8px",
+                                        fontWeight: "500",
+                                        fontSize: "0.85rem",
+                                      }}
+                                    >
+                                      {transaction.type === "income"
+                                        ? "Receita"
+                                        : "Despesa"}
+                                    </Badge>
+                                  </td>
+                                  <td style={{ padding: "1rem" }}>
+                                    <Badge
+                                      bg="secondary"
+                                      style={{
+                                        padding: "6px 12px",
+                                        borderRadius: "8px",
+                                        fontWeight: "500",
+                                        fontSize: "0.85rem",
+                                      }}
+                                    >
+                                      {transaction.category}
+                                    </Badge>
+                                  </td>
+                                  <td
+                                    className="text-end"
+                                    style={{ padding: "1rem" }}
+                                  >
+                                    <span
+                                      className={
+                                        transaction.type === "income"
+                                          ? "text-success fw-bold"
+                                          : "text-danger fw-bold"
+                                      }
+                                      style={{ fontSize: "1rem" }}
+                                    >
+                                      {transaction.type === "income"
+                                        ? "+"
+                                        : "-"}
+                                      {formatCurrency(transaction.value)}
+                                    </span>
+                                  </td>
+                                  <td style={{ padding: "1rem" }}>
+                                    <Badge
+                                      bg="primary"
+                                      style={{
+                                        padding: "6px 12px",
+                                        borderRadius: "8px",
+                                        fontWeight: "500",
+                                        fontSize: "0.85rem",
+                                      }}
+                                    >
+                                      {(() => {
+                                        switch (transaction.recurrence_type) {
+                                          case "fixed":
+                                            return "Fixa Mensal";
+                                          case "installment":
+                                            return `Parcelada ${
+                                              transaction.current_installment ||
+                                              1
+                                            }/${
+                                              transaction.total_installments ||
+                                              transaction.total_installments ||
+                                              1
+                                            }`;
+                                          case "variable":
+                                            return "Variável Mensal";
+                                        }
+                                      })()}
+                                    </Badge>
+                                  </td>
+                                  <td style={{ padding: "1rem" }}>
+                                    Dia {transaction.day_of_month || "N/A"}
+                                  </td>
+                                  <td style={{ padding: "1rem" }}>
+                                    {new Date(
+                                      transaction.start_date
+                                    ).toLocaleDateString("pt-BR")}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </Table>
+                        </div>
+                      </div>
+                    ) : null;
+                  })()}
                 </>
               )}
             </>

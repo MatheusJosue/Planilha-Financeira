@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { Table, Button, Badge, Form, InputGroup } from "react-bootstrap";
 import {
-  FiEdit,
   FiTrash2,
   FiSearch,
   FiMenu,
   FiCopy,
   FiRepeat,
+  FiEdit,
 } from "react-icons/fi";
 import { showConfirm } from "@/lib/sweetalert";
 import {
@@ -82,6 +82,73 @@ function SortableRow({
 
   return (
     <tr ref={setNodeRef} style={style}>
+      <td className="text-center" style={{ padding: "1rem" }}>
+        {!isPredicted ? (
+          <>
+            <Button
+              variant="outline-success"
+              size="sm"
+              className="mb-1 me-1"
+              onClick={() => onDuplicate?.(transaction)}
+              style={{ borderRadius: "8px", padding: "6px 12px" }}
+              title="Duplicar para próximo mês"
+            >
+              <FiCopy />
+            </Button>
+            <Button
+              variant="outline-primary"
+              size="sm"
+              className="mb-1 me-1"
+              onClick={() => onEdit(transaction)}
+              style={{ borderRadius: "8px", padding: "6px 12px" }}
+              title="Editar"
+            >
+              <FiEdit />
+            </Button>
+            <Button
+              variant="outline-danger"
+              size="sm"
+              className="mb-1"
+              onClick={() => onDelete(transaction.id, transaction.description)}
+              style={{ borderRadius: "8px", padding: "6px 12px" }}
+              title="Excluir"
+            >
+              <FiTrash2 />
+            </Button>
+          </>
+        ) : isPredicted && transaction.recurring_id ? (
+          <>
+            <Button
+              variant="primary"
+              size="sm"
+              className="mb-1 me-1"
+              onClick={() => {
+                onConfirmRecurring?.(transaction);
+              }}
+              style={{
+                borderRadius: "8px",
+                padding: "6px 16px",
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                border: "none",
+                fontWeight: "600",
+              }}
+              title="Confirmar conta recorrente com possibilidade de ajustar valor"
+            >
+              ✓ Confirmar
+            </Button>
+            <Button
+              variant="outline-danger"
+              size="sm"
+              className="mb-1"
+              onClick={() => onDelete(transaction.id, transaction.description)}
+              style={{ borderRadius: "8px", padding: "6px 12px" }}
+              title="Excluir transação prevista"
+            >
+              <FiTrash2 />
+            </Button>
+          </>
+        ) : null}
+      </td>
       <td className="text-start" style={{ padding: "1rem" }}>
         <span
           className={
@@ -170,69 +237,6 @@ function SortableRow({
             </Badge>
           )}
         </div>
-      </td>
-      <td className="text-center" style={{ padding: "1rem" }}>
-        {isPredicted && transaction.recurring_id ? (
-          <>
-            <Button
-              variant="primary"
-              size="sm"
-              className="me-2"
-              onClick={() => {
-                onConfirmRecurring?.(transaction);
-              }}
-              style={{
-                borderRadius: "8px",
-                padding: "6px 16px",
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                border: "none",
-                fontWeight: "600",
-              }}
-              title="Confirmar conta recorrente com possibilidade de ajustar valor"
-            >
-              ✓ Confirmar
-            </Button>
-            <Button
-              variant="outline-danger"
-              size="sm"
-              onClick={() => onDelete(transaction.id, transaction.description)}
-              style={{ borderRadius: "8px", padding: "6px 12px" }}
-              title="Excluir transação prevista"
-            >
-              <FiTrash2 />
-            </Button>
-          </>
-        ) : !isPredicted ? (
-          <>
-            <Button
-              variant="outline-success"
-              size="sm"
-              className="me-2"
-              onClick={() => onDuplicate?.(transaction)}
-              style={{ borderRadius: "8px", padding: "6px 12px" }}
-              title="Duplicar para próximo mês"
-            >
-              <FiCopy />
-            </Button>
-            <Button
-              variant="outline-primary"
-              size="sm"
-              className="me-2"
-              onClick={() => onEdit(transaction)}
-              style={{ borderRadius: "8px", padding: "6px 12px" }}
-            >
-              <FiEdit />
-            </Button>
-            <Button
-              variant="outline-danger"
-              size="sm"
-              onClick={() => onDelete(transaction.id, transaction.description)}
-              style={{ borderRadius: "8px", padding: "6px 12px" }}
-            >
-              <FiTrash2 />
-            </Button>
-          </>
-        ) : null}
       </td>
     </tr>
   );
@@ -482,6 +486,16 @@ export function TransactionList({
             >
               <tr>
                 <th
+                  className="text-center"
+                  style={{
+                    padding: "1rem",
+                    fontWeight: "600",
+                    fontSize: "0.9rem",
+                  }}
+                >
+                  Ações
+                </th>
+                <th
                   className="text-start"
                   style={{
                     padding: "1rem",
@@ -528,16 +542,6 @@ export function TransactionList({
                   <div className="d-flex align-items-center gap-2">
                     <FiMenu /> <span>Data</span>
                   </div>
-                </th>
-                <th
-                  className="text-center"
-                  style={{
-                    padding: "1rem",
-                    fontWeight: "600",
-                    fontSize: "0.9rem",
-                  }}
-                >
-                  Ações
                 </th>
               </tr>
             </thead>

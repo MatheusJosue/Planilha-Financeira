@@ -182,6 +182,16 @@ export default function RecorrentesPage() {
                 >
                   <tr>
                     <th
+                      className="text-center"
+                      style={{
+                        padding: "1rem",
+                        fontWeight: "600",
+                        fontSize: "0.9rem",
+                      }}
+                    >
+                      Ações
+                    </th>
+                    <th
                       style={{
                         padding: "1rem",
                         fontWeight: "600",
@@ -244,21 +254,33 @@ export default function RecorrentesPage() {
                     >
                       Início
                     </th>
-                    <th
-                      className="text-end"
-                      style={{
-                        padding: "1rem",
-                        fontWeight: "600",
-                        fontSize: "0.9rem",
-                      }}
-                    >
-                      Ações
-                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {activeTransactions.map((transaction) => (
                     <tr key={transaction.id}>
+                      <td className="text-center" style={{ padding: "1rem" }}>
+                        <Button
+                          variant="outline-primary"
+                          size="sm"
+                          className="me-2 mb-1"
+                          onClick={() => handleEdit(transaction)}
+                          style={{ borderRadius: "8px", padding: "6px 12px" }}
+                          title="Editar"
+                        >
+                          <FiEdit2 />
+                        </Button>
+                        <Button
+                          variant="outline-danger"
+                          size="sm"
+                          className="mb-1"
+                          onClick={() => handleDelete(transaction.id)}
+                          style={{ borderRadius: "8px", padding: "6px 12px" }}
+                          title="Excluir"
+                        >
+                          <FiTrash2 />
+                        </Button>
+                      </td>
                       <td style={{ padding: "1rem", fontWeight: "500" }}>
                         <strong>{transaction.description}</strong>
                       </td>
@@ -322,25 +344,6 @@ export default function RecorrentesPage() {
                           "pt-BR"
                         )}
                       </td>
-                      <td className="text-end" style={{ padding: "1rem" }}>
-                        <Button
-                          variant="outline-primary"
-                          size="sm"
-                          className="me-2"
-                          onClick={() => handleEdit(transaction)}
-                          style={{ borderRadius: "8px", padding: "6px 12px" }}
-                        >
-                          <FiEdit2 />
-                        </Button>
-                        <Button
-                          variant="outline-danger"
-                          size="sm"
-                          onClick={() => handleDelete(transaction.id)}
-                          style={{ borderRadius: "8px", padding: "6px 12px" }}
-                        >
-                          <FiTrash2 />
-                        </Button>
-                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -372,6 +375,16 @@ export default function RecorrentesPage() {
                   }}
                 >
                   <tr>
+                    <th
+                      className="text-center"
+                      style={{
+                        padding: "1rem",
+                        fontWeight: "600",
+                        fontSize: "0.9rem",
+                      }}
+                    >
+                      Ações
+                    </th>
                     <th
                       style={{
                         padding: "1rem",
@@ -417,21 +430,33 @@ export default function RecorrentesPage() {
                     >
                       Recorrência
                     </th>
-                    <th
-                      className="text-end"
-                      style={{
-                        padding: "1rem",
-                        fontWeight: "600",
-                        fontSize: "0.9rem",
-                      }}
-                    >
-                      Ações
-                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {inactiveTransactions.map((transaction) => (
                     <tr key={transaction.id} className="text-muted">
+                      <td className="text-center" style={{ padding: "1rem" }}>
+                        <Button
+                          variant="outline-primary"
+                          size="sm"
+                          className="me-2 mb-1"
+                          onClick={() => handleEdit(transaction)}
+                          style={{ borderRadius: "8px", padding: "6px 12px" }}
+                          title="Editar"
+                        >
+                          <FiEdit2 />
+                        </Button>
+                        <Button
+                          variant="outline-danger"
+                          size="sm"
+                          className="mb-1"
+                          onClick={() => handleDelete(transaction.id)}
+                          style={{ borderRadius: "8px", padding: "6px 12px" }}
+                          title="Excluir"
+                        >
+                          <FiTrash2 />
+                        </Button>
+                      </td>
                       <td style={{ padding: "1rem", fontWeight: "500" }}>
                         <strong>{transaction.description}</strong>
                       </td>
@@ -486,25 +511,6 @@ export default function RecorrentesPage() {
                         >
                           {getRecurrenceLabel(transaction)}
                         </Badge>
-                      </td>
-                      <td className="text-end" style={{ padding: "1rem" }}>
-                        <Button
-                          variant="outline-primary"
-                          size="sm"
-                          className="me-2"
-                          onClick={() => handleEdit(transaction)}
-                          style={{ borderRadius: "8px", padding: "6px 12px" }}
-                        >
-                          <FiEdit2 />
-                        </Button>
-                        <Button
-                          variant="outline-danger"
-                          size="sm"
-                          onClick={() => handleDelete(transaction.id)}
-                          style={{ borderRadius: "8px", padding: "6px 12px" }}
-                        >
-                          <FiTrash2 />
-                        </Button>
                       </td>
                     </tr>
                   ))}
