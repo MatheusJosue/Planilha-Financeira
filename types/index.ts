@@ -35,6 +35,7 @@ export interface RecurringTransaction {
   is_active: boolean;
   user_id: string;
   created_at: string;
+  selected_income_id?: string;
 }
 
 export interface Category {

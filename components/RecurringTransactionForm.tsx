@@ -39,6 +39,7 @@ export default function RecurringTransactionForm({
         total_installments: transaction.total_installments?.toString() || "",
         day_of_month: transaction.day_of_month.toString(),
         is_active: transaction.is_active,
+        selected_income_id: transaction.selected_income_id || "",
       };
     }
     return {
@@ -52,6 +53,7 @@ export default function RecurringTransactionForm({
       total_installments: "",
       day_of_month: "5",
       is_active: true,
+      selected_income_id: "",
     };
   };
 
@@ -61,6 +63,28 @@ export default function RecurringTransactionForm({
     setFormData(getInitialFormData());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transaction, show]);
+
+  // Calculate the final value for variable_by_income in real-time
+  const calculateVariableByIncomeValue = (): number => {
+    if (formData.recurrence_type !== "variable_by_income") return 0;
+
+    const percentage = parseFloat(formData.value);
+    if (isNaN(percentage)) return 0;
+
+    if (formData.selected_income_id) {
+      // Use selected income transaction
+      const selectedIncome = incomeTransactions.find(t => t.id === formData.selected_income_id);
+      if (selectedIncome) {
+        return (selectedIncome.value * percentage) / 100;
+      }
+    } else {
+      // Use total income (sum of all income transactions)
+      const totalIncome = incomeTransactions.reduce((sum, t) => sum + t.value, 0);
+      return (totalIncome * percentage) / 100;
+    }
+
+    return 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,6 +111,7 @@ export default function RecurringTransactionForm({
       start_date: formData.start_date,
       day_of_month: parseInt(formData.day_of_month),
       is_active: formData.is_active,
+      selected_income_id: formData.selected_income_id || undefined,
     };
 
     if (
@@ -280,47 +305,69 @@ export default function RecurringTransactionForm({
             </Col>
 
             {isVariableByIncome && (
-              <Col md={12} className="mb-3">
-                <Form.Group>
-                  <Form.Label
-                    style={{ color: "var(--foreground)", fontWeight: 500 }}
-                  >
-                    Renda Mensal Atual
-                  </Form.Label>
-                  <div
-                    style={{
-                      backgroundColor: "var(--input-bg)",
-                      color: "var(--foreground)",
-                      border: "1px solid var(--border-color)",
-                      borderRadius: "6px",
-                      padding: "10px 12px",
-                      minHeight: "40px",
-                      display: "flex",
-                      alignItems: "center",
-                    }}
-                  >
-                    {incomeTransactions.length > 0 ? (
-                      <div>
-                        <div>
-                          <strong>Total:</strong> {incomeTransactions.reduce((sum, t) => sum + t.value, 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                        </div>
-                        <div className="mt-1">
-                          <small className="text-muted">
-                            {incomeTransactions.length} transações de renda registradas
-                          </small>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-muted">
-                        Nenhuma transação de renda encontrada
-                      </div>
-                    )}
-                  </div>
-                  <Form.Text style={{ color: "var(--muted-foreground)" }}>
-                    Valor base para cálculo do percentual
-                  </Form.Text>
-                </Form.Group>
-              </Col>
+              <>
+                <Col md={12} className="mb-3">
+                  <Form.Group>
+                    <Form.Label
+                      style={{ color: "var(--foreground)", fontWeight: 500 }}
+                    >
+                      Selecione a Renda Base
+                    </Form.Label>
+                    <Form.Select
+                      id="form-selected-income"
+                      value={formData.selected_income_id}
+                      onChange={(e) =>
+                        setFormData({ ...formData, selected_income_id: e.target.value })
+                      }
+                      style={{
+                        backgroundColor: "var(--input-bg)",
+                        color: "var(--foreground)",
+                        borderColor: "var(--border-color)",
+                      }}
+                    >
+                      <option value="">Soma de todas as rendas do mês</option>
+                      {incomeTransactions.map((income) => (
+                        <option key={income.id} value={income.id}>
+                          {income.description} - {income.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </option>
+                      ))}
+                    </Form.Select>
+                    <Form.Text style={{ color: "var(--muted-foreground)" }}>
+                      Escolha uma renda específica ou use a soma de todas
+                    </Form.Text>
+                  </Form.Group>
+                </Col>
+
+                <Col md={12} className="mb-3">
+                  <Form.Group>
+                    <Form.Label
+                      style={{ color: "var(--foreground)", fontWeight: 500 }}
+                    >
+                      Valor Calculado (Preview)
+                    </Form.Label>
+                    <div
+                      style={{
+                        backgroundColor: "var(--input-bg)",
+                        color: "var(--foreground)",
+                        border: "2px solid var(--border-color)",
+                        borderRadius: "6px",
+                        padding: "12px 16px",
+                        minHeight: "48px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "1.25rem",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {calculateVariableByIncomeValue().toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </div>
+                    <Form.Text style={{ color: "var(--muted-foreground)" }}>
+                      Este será o valor da transação com base no percentual e renda selecionados
+                    </Form.Text>
+                  </Form.Group>
+                </Col>
+              </>
             )}
 
             <Col md={12} className="mb-3">

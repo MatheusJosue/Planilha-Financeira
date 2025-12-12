@@ -951,15 +951,26 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
         let calculatedValue = typeof recurring.value === 'string' ? parseFloat(recurring.value) : Number(recurring.value);
 
         if (recurring.recurrence_type === 'variable_by_income') {
-          const targetMonthIncome = state.transactions
-            .filter(t =>
-              t.type === 'income' &&
-              t.date.startsWith(month)
-            )
-            .reduce((sum, t) => sum + t.value, 0);
+          let incomeValue = 0;
+
+          if (recurring.selected_income_id) {
+            // Use specific selected income transaction
+            const selectedIncome = state.transactions.find(
+              t => t.id === recurring.selected_income_id && t.date.startsWith(month)
+            );
+            incomeValue = selectedIncome ? selectedIncome.value : 0;
+          } else {
+            // Use total income (sum of all income transactions for the month)
+            incomeValue = state.transactions
+              .filter(t =>
+                t.type === 'income' &&
+                t.date.startsWith(month)
+              )
+              .reduce((sum, t) => sum + t.value, 0);
+          }
 
           // Calculate the percentage value
-          calculatedValue = (targetMonthIncome * recurring.value) / 100;
+          calculatedValue = (incomeValue * recurring.value) / 100;
           console.log(`DEBUG: Calculated value for variable_by_income: ${calculatedValue}`);
         }
 
