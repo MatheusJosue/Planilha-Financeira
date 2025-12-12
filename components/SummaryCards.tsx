@@ -136,7 +136,7 @@ export function SummaryCards({ dashboardConfig }: SummaryCardsProps) {
 
   return (
     <>
-      <Row className="g-4 mb-4">
+      <Row id="summary-cards-container" className="g-4 mb-4">
         {(dashboardConfig?.monthlyIncome ?? true) && (
           <Col md={4}>
             <Card

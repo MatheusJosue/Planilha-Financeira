@@ -49,6 +49,7 @@ export function ConfirmRecurringModal({
 
   return (
     <Modal
+      id="confirm-recurring-modal"
       show={show}
       onHide={onHide}
       onShow={handleShow}
@@ -70,7 +71,7 @@ export function ConfirmRecurringModal({
           Confirmar Conta Recorrente
         </Modal.Title>
       </Modal.Header>
-      <Modal.Body className="p-4">
+      <Modal.Body id="confirm-recurring-modal-body" className="p-4">
         {transaction && (
           <>
             <div className="mb-3">
@@ -101,6 +102,7 @@ export function ConfirmRecurringModal({
               <InputGroup>
                 <InputGroup.Text>R$</InputGroup.Text>
                 <Form.Control
+                  id="confirm-value-input"
                   type="text"
                   value={value}
                   onChange={(e) => setValue(e.target.value)}
@@ -141,6 +143,7 @@ export function ConfirmRecurringModal({
       </Modal.Body>
       <Modal.Footer style={{ border: "none", padding: "1rem 1.5rem" }}>
         <Button
+          id="btn-cancel-confirm"
           variant="secondary"
           onClick={onHide}
           disabled={isLoading}
@@ -154,6 +157,7 @@ export function ConfirmRecurringModal({
           Cancelar
         </Button>
         <Button
+          id="btn-confirm-transaction"
           onClick={handleConfirm}
           disabled={isLoading}
           className="d-flex align-items-center gap-2"

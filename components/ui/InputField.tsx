@@ -11,6 +11,7 @@ interface InputFieldProps {
   className?: string;
   style?: React.CSSProperties;
   labelStyle?: React.CSSProperties;
+  id?: string;
 }
 
 export function InputField({
@@ -23,10 +24,12 @@ export function InputField({
   className = "mb-3",
   style,
   labelStyle,
+  id,
 }: InputFieldProps) {
   return (
     <FormField label={label} className={className} labelStyle={labelStyle}>
       <Form.Control
+        id={id}
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}

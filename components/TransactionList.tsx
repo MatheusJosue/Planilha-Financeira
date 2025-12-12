@@ -81,11 +81,12 @@ function SortableRow({
   };
 
   return (
-    <tr ref={setNodeRef} style={style}>
+    <tr ref={setNodeRef} style={style} id={`transaction-row-${transaction.id}`}>
       <td className="text-center" style={{ padding: "1rem" }}>
         {!isPredicted ? (
           <>
             <Button
+              id={`btn-duplicate-${transaction.id}`}
               variant="outline-success"
               size="sm"
               className="mb-1 me-1"
@@ -96,6 +97,7 @@ function SortableRow({
               <FiCopy />
             </Button>
             <Button
+              id={`btn-edit-transaction-${transaction.id}`}
               variant="outline-primary"
               size="sm"
               className="mb-1 me-1"
@@ -106,6 +108,7 @@ function SortableRow({
               <FiEdit />
             </Button>
             <Button
+              id={`btn-delete-transaction-${transaction.id}`}
               variant="outline-danger"
               size="sm"
               className="mb-1"
@@ -119,6 +122,7 @@ function SortableRow({
         ) : isPredicted && transaction.recurring_id ? (
           <>
             <Button
+              id={`btn-confirm-recurring-${transaction.id}`}
               variant="primary"
               size="sm"
               className="mb-1 me-1"
@@ -137,6 +141,7 @@ function SortableRow({
               ✓ Confirmar
             </Button>
             <Button
+              id={`btn-delete-predicted-${transaction.id}`}
               variant="outline-danger"
               size="sm"
               className="mb-1"
@@ -402,6 +407,7 @@ export function TransactionList({
               <FiSearch />
             </InputGroup.Text>
             <Form.Control
+              id="transaction-search"
               placeholder="Buscar transação..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -412,6 +418,7 @@ export function TransactionList({
 
         <div className="col-md-2">
           <Form.Select
+            id="transaction-type-filter"
             value={filterType}
             onChange={(e) =>
               setFilterType(e.target.value as "all" | "income" | "expense")
@@ -429,6 +436,7 @@ export function TransactionList({
 
         <div className="col-md-3">
           <Form.Select
+            id="transaction-category-filter"
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
             style={{
@@ -447,6 +455,7 @@ export function TransactionList({
 
         <div className="col-md-3">
           <Form.Select
+            id="transaction-month-filter"
             value={filterMonth}
             onChange={(e) => setFilterMonth(e.target.value)}
             style={{
@@ -476,7 +485,7 @@ export function TransactionList({
             overflow: "hidden",
           }}
         >
-          <Table hover responsive className="align-middle mb-0">
+          <Table id="transaction-list-table" hover responsive className="align-middle mb-0">
             <thead
               style={{
                 background:

@@ -118,7 +118,7 @@ export default function RecurringTransactionForm({
   const isVariableByIncome = formData.recurrence_type === "variable_by_income";
 
   return (
-    <Modal show={show} onHide={onHide} size="lg" centered>
+    <Modal id="recurring-transaction-form-modal" show={show} onHide={onHide} size="lg" centered>
       <Modal.Header
         closeButton
         style={{
@@ -144,7 +144,7 @@ export default function RecurringTransactionForm({
           )}
         </Modal.Title>
       </Modal.Header>
-      <Form onSubmit={handleSubmit}>
+      <Form id="recurring-transaction-form" onSubmit={handleSubmit}>
         <Modal.Body style={{ padding: "2rem" }}>
           <Row>
             <Col md={12} className="mb-3">
@@ -155,6 +155,7 @@ export default function RecurringTransactionForm({
                   Tipo de Recorrência
                 </Form.Label>
                 <Form.Select
+                  id="form-recurrence-type"
                   value={formData.recurrence_type}
                   onChange={(e) =>
                     setFormData({
@@ -188,6 +189,7 @@ export default function RecurringTransactionForm({
                   Descrição
                 </Form.Label>
                 <Form.Control
+                  id="form-description"
                   type="text"
                   value={formData.description}
                   onChange={(e) =>
@@ -214,6 +216,7 @@ export default function RecurringTransactionForm({
                 {isVariableByIncome ? (
                   <InputGroup>
                     <Form.Control
+                      id="form-value-percentage"
                       type="number"
                       min="0"
                       max="100"
@@ -252,6 +255,7 @@ export default function RecurringTransactionForm({
                       R$
                     </InputGroup.Text>
                     <Form.Control
+                      id="form-value"
                       type="text"
                       value={formData.value}
                       onChange={(e) =>
@@ -327,6 +331,7 @@ export default function RecurringTransactionForm({
                   Categoria
                 </Form.Label>
                 <Form.Select
+                  id="form-category"
                   value={formData.category}
                   onChange={(e) =>
                     setFormData({ ...formData, category: e.target.value })
@@ -355,6 +360,7 @@ export default function RecurringTransactionForm({
                   Dia do Vencimento
                 </Form.Label>
                 <Form.Control
+                  id="form-day-of-month"
                   type="number"
                   min="1"
                   max="31"
@@ -383,6 +389,7 @@ export default function RecurringTransactionForm({
                   Data de Início
                 </Form.Label>
                 <Form.Control
+                  id="form-start-date"
                   type="date"
                   value={formData.start_date}
                   onChange={(e) =>
@@ -407,6 +414,7 @@ export default function RecurringTransactionForm({
                     Número de Parcelas
                   </Form.Label>
                   <Form.Control
+                    id="form-total-installments"
                     type="number"
                     min="1"
                     value={formData.total_installments}
@@ -437,6 +445,7 @@ export default function RecurringTransactionForm({
                     Data de Término (opcional)
                   </Form.Label>
                   <Form.Control
+                    id="form-end-date"
                     type="date"
                     value={formData.end_date}
                     onChange={(e) =>
@@ -458,6 +467,7 @@ export default function RecurringTransactionForm({
             <Col md={12}>
               <Form.Group>
                 <Form.Check
+                  id="form-is-active"
                   type="checkbox"
                   label="Transação ativa"
                   checked={formData.is_active}
@@ -482,6 +492,7 @@ export default function RecurringTransactionForm({
           }}
         >
           <Button
+            id="btn-cancel-recurring"
             variant="outline-secondary"
             onClick={onHide}
             style={{
@@ -492,6 +503,7 @@ export default function RecurringTransactionForm({
             Cancelar
           </Button>
           <Button
+            id="btn-submit-recurring"
             type="submit"
             style={{
               background: gradientColors,

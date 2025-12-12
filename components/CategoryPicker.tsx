@@ -46,7 +46,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
   const needsScroll = categories.length > 6; // Approximate threshold
 
   return (
-    <div className={className}>
+    <div id="category-picker" className={className}>
       <div className="d-flex flex-column gap-2">
         <label
           className="form-label mb-0"
@@ -69,6 +69,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
           {categories.map((category) => (
             <Button
               key={category}
+              id={`btn-category-${category.toLowerCase().replace(/\s+/g, '-')}`}
               variant={selectedCategory === category ? "primary" : "outline-secondary"}
               size="sm"
               onClick={() => handleCategoryClick(category)}

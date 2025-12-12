@@ -153,7 +153,7 @@ export function TransactionForm({
   };
 
   return (
-    <Modal show={show} onHide={onHide} centered size="lg">
+    <Modal id="transaction-form-modal" show={show} onHide={onHide} centered size="lg">
       <Modal.Header
         closeButton
         style={{
@@ -176,12 +176,13 @@ export function TransactionForm({
           )}
         </Modal.Title>
       </Modal.Header>
-      <Form onSubmit={handleSubmit}>
+      <Form id="transaction-form" onSubmit={handleSubmit}>
         <Modal.Body style={{ padding: "2rem" }}>
           {!defaultType && (
             <Row className="mb-3">
               <Col md={12}>
                 <SelectField
+                  id="form-transaction-type"
                   label="Tipo de Transação"
                   value={formData.type}
                   onChange={(value) =>
@@ -200,6 +201,7 @@ export function TransactionForm({
           <Row className="mb-3">
             <Col md={12}>
               <InputField
+                id="form-description"
                 label="Descrição"
                 value={formData.description}
                 onChange={(value) =>
@@ -222,6 +224,7 @@ export function TransactionForm({
                   </Form.Label>
                   <div className="d-flex align-items-center">
                     <Form.Control
+                      id="form-value-percentage"
                       type="number"
                       min="0"
                       max="100"
@@ -254,6 +257,7 @@ export function TransactionForm({
                 </Form.Group>
               ) : (
                 <CurrencyInput
+                  id="form-value"
                   label={currentValueLabel}
                   value={formData.value}
                   onChange={handleValueChange}
@@ -318,6 +322,7 @@ export function TransactionForm({
           <Row className="mb-3">
             <Col md={12}>
               <CategoryPicker
+                className="form-category-picker"
                 categories={categories}
                 selectedCategory={formData.category}
                 onSelect={(category) => setFormData({ ...formData, category })}
@@ -330,6 +335,7 @@ export function TransactionForm({
               <Col md={12}>
                 <Form.Group>
                   <Form.Check
+                    id="form-is-recurring"
                     type="checkbox"
                     label="🔄 Transação Recorrente"
                     checked={formData.isRecurring}
@@ -357,6 +363,7 @@ export function TransactionForm({
                       Tipo de Recorrência
                     </Form.Label>
                     <Form.Select
+                      id="form-recurrence-type"
                       value={formData.recurrence_type}
                       onChange={(e) =>
                         setFormData({
@@ -396,6 +403,7 @@ export function TransactionForm({
                       Dia do Vencimento
                     </Form.Label>
                     <Form.Control
+                      id="form-day-of-month"
                       type="number"
                       min="1"
                       max="31"
@@ -430,6 +438,7 @@ export function TransactionForm({
                         Número de Parcelas
                       </Form.Label>
                       <Form.Control
+                        id="form-total-installments"
                         type="number"
                         min="1"
                         value={formData.total_installments}
@@ -462,6 +471,7 @@ export function TransactionForm({
                         Data de Término (opcional)
                       </Form.Label>
                       <Form.Control
+                        id="form-end-date"
                         type="date"
                         value={formData.end_date}
                         onChange={(e) =>
@@ -486,6 +496,7 @@ export function TransactionForm({
           <Row>
             <Col md={12}>
               <DateInput
+                id="form-date"
                 label={formData.isRecurring ? "Data de Início" : "Data"}
                 value={formData.date}
                 onChange={(value) => setFormData({ ...formData, date: value })}
@@ -501,6 +512,7 @@ export function TransactionForm({
           }}
         >
           <Button
+            id="btn-cancel-transaction"
             variant="outline-secondary"
             onClick={onHide}
             style={{
@@ -512,6 +524,7 @@ export function TransactionForm({
             Cancelar
           </Button>
           <Button
+            id="btn-submit-transaction"
             type="submit"
             style={{
               background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",

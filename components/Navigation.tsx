@@ -28,7 +28,7 @@ export function Navigation() {
   };
 
   return (
-    <Navbar expand="lg" sticky="top" className="py-3 navbar-gradient">
+    <Navbar id="main-navigation" expand="lg" sticky="top" className="py-3 navbar-gradient">
       <Container fluid className="px-4">
         <Navbar.Brand
           as={Link}
@@ -56,6 +56,7 @@ export function Navigation() {
         <Navbar.Collapse id="basic-navbar-nav">
           <Nav className="ms-auto gap-2 align-items-lg-center">
             <Nav.Link
+              id="nav-dashboard"
               as={Link}
               href="/"
               active={pathname === "/"}
@@ -66,6 +67,7 @@ export function Navigation() {
               <FiHome size={18} /> Dashboard
             </Nav.Link>
             <Nav.Link
+              id="nav-transactions"
               as={Link}
               href="/transacoes"
               active={pathname === "/transacoes"}
@@ -81,6 +83,7 @@ export function Navigation() {
               <FiList size={18} /> Financeiro
             </Nav.Link>
             <Nav.Link
+              id="nav-settings"
               as={Link}
               href="/configuracoes"
               active={pathname === "/configuracoes"}
@@ -97,6 +100,7 @@ export function Navigation() {
             </Nav.Link>
 
             <Nav.Link
+              id="btn-toggle-theme"
               onClick={toggleTheme}
               className="d-flex align-items-center gap-2 px-3 py-2 rounded-3 fw-semibold text-white cursor-pointer"
               style={{
@@ -115,10 +119,10 @@ export function Navigation() {
               )}
             </Nav.Link>
 
-            <Dropdown align="end">
+            <Dropdown id="user-dropdown" align="end">
               <Dropdown.Toggle
                 variant="light"
-                id="user-dropdown"
+                id="user-dropdown-toggle"
                 className="d-flex align-items-center gap-2 px-3 py-2 rounded-3 fw-semibold"
                 style={{
                   background: "rgba(255, 255, 255, 0.2)",
@@ -144,6 +148,7 @@ export function Navigation() {
                 </Dropdown.Item>
                 <Dropdown.Divider />
                 <Dropdown.Item
+                  id="btn-logout"
                   onClick={handleSignOut}
                   className="d-flex align-items-center gap-2 rounded-2"
                   style={{ padding: "10px 12px" }}

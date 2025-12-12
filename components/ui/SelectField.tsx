@@ -10,6 +10,7 @@ interface SelectFieldProps {
   className?: string;
   style?: React.CSSProperties;
   labelStyle?: React.CSSProperties;
+  id?: string;
 }
 
 export function SelectField({
@@ -21,10 +22,12 @@ export function SelectField({
   className = "mb-3",
   style,
   labelStyle,
+  id,
 }: SelectFieldProps) {
   return (
     <FormField label={label} className={className} labelStyle={labelStyle}>
       <Form.Select
+        id={id}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         required={required}

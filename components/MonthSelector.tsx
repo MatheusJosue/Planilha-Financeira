@@ -180,6 +180,7 @@ const NavigationButton = ({
 
   return (
     <Button
+      id={`btn-${direction}-month`}
       variant="light"
       size="sm"
       onClick={onClick}
@@ -218,6 +219,7 @@ const MonthBadge = ({ currentMonth, onClick }: MonthBadgeProps) => {
 
   return (
     <button
+      id="month-badge"
       type="button"
       onClick={onClick}
       className="d-flex align-items-center justify-content-center gap-2"
@@ -486,6 +488,7 @@ const availableMonths = useMemo(
   return (
     <>
       <nav
+        id="month-selector"
         className="d-flex align-items-center justify-content-end mb-3 p-3 gap-3"
         aria-label="Navegação de meses"
       >
@@ -510,6 +513,7 @@ const availableMonths = useMemo(
 
         <div className="d-flex gap-2">
           <Button
+            id="btn-generate-pdf"
             size="sm"
             onClick={handleGeneratePDF}
             className="d-flex align-items-center"
@@ -530,6 +534,7 @@ const availableMonths = useMemo(
             onClick={handleOpenModal}
             icon={<FiPlus size={16} />}
             ariaLabel="Criar novo mês"
+            className="btn-new-month"
           >
             Novo Mês
           </PrimaryButton>

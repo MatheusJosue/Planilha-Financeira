@@ -10,6 +10,7 @@ interface CurrencyInputProps {
   className?: string;
   style?: React.CSSProperties;
   labelStyle?: React.CSSProperties;
+  id?: string;
 }
 
 export function CurrencyInput({
@@ -21,6 +22,7 @@ export function CurrencyInput({
   className = "mb-3",
   style,
   labelStyle,
+  id,
 }: CurrencyInputProps) {
   return (
     <FormField label={label} className={className} labelStyle={labelStyle}>
@@ -29,6 +31,7 @@ export function CurrencyInput({
           R$
         </InputGroup.Text>
         <Form.Control
+          id={id}
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}

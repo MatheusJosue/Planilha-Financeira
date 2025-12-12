@@ -9,6 +9,7 @@ interface DateInputProps {
   className?: string;
   style?: React.CSSProperties;
   labelStyle?: React.CSSProperties;
+  id?: string;
 }
 
 export function DateInput({
@@ -19,10 +20,12 @@ export function DateInput({
   className = "mb-3",
   style,
   labelStyle,
+  id,
 }: DateInputProps) {
   return (
     <FormField label={label} className={className} labelStyle={labelStyle}>
       <Form.Control
+        id={id}
         type="date"
         value={value}
         onChange={(e) => onChange(e.target.value)}
