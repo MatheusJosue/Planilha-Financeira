@@ -253,6 +253,7 @@ export default function TransactionsPage() {
           </p>
         </div>
         <Button
+          id="btn-add-transaction"
           size="lg"
           onClick={() => {
             if (activeTab === "income") {
@@ -290,6 +291,7 @@ export default function TransactionsPage() {
           <>
             <Col xs={12} md={4}>
               <Card
+                id="card-one-time-expenses"
                 className="text-center shadow-sm h-100"
                 style={{ borderRadius: "12px" }}
               >
@@ -298,7 +300,7 @@ export default function TransactionsPage() {
                     <FiDollarSign className="text-danger me-2" size={20} />
                     <h6 className="text-muted mb-0">Despesas Pontuais</h6>
                   </div>
-                  <h3 className="text-danger mb-0">
+                  <h3 className="text-danger mb-0" id="total-one-time-expenses">
                     {formatCurrency(currentExpenses)}
                   </h3>
                   <small className="text-muted">
@@ -317,6 +319,7 @@ export default function TransactionsPage() {
             </Col>
             <Col xs={12} md={4}>
               <Card
+                id="card-recurring-expenses"
                 className="text-center shadow-sm h-100"
                 style={{ borderRadius: "12px" }}
               >
@@ -325,7 +328,7 @@ export default function TransactionsPage() {
                     <FiRepeat className="text-danger me-2" size={20} />
                     <h6 className="text-muted mb-0">Contas Recorrentes</h6>
                   </div>
-                  <h3 className="text-danger mb-0">
+                  <h3 className="text-danger mb-0" id="total-recurring-expenses">
                     {formatCurrency(confirmedRecurringExpense)}
                   </h3>
                   <small className="text-muted">
@@ -344,6 +347,7 @@ export default function TransactionsPage() {
             </Col>
             <Col xs={12} md={4}>
               <Card
+                id="card-month-total-expenses"
                 className="text-center shadow-sm h-100"
                 style={{ borderRadius: "12px" }}
               >
@@ -352,7 +356,7 @@ export default function TransactionsPage() {
                     <FiCalendar className="text-warning me-2" size={20} />
                     <h6 className="text-muted mb-0">Total do Mês</h6>
                   </div>
-                  <h3 className="text-warning mb-0">
+                  <h3 className="text-warning mb-0" id="total-month-expenses">
                     {formatCurrency(
                       currentExpenses + confirmedRecurringExpense
                     )}
@@ -370,6 +374,7 @@ export default function TransactionsPage() {
           <>
             <Col xs={12} md={4}>
               <Card
+                id="card-total-income"
                 className="text-center shadow-sm h-100"
                 style={{ borderRadius: "12px" }}
               >
@@ -378,7 +383,7 @@ export default function TransactionsPage() {
                     <FiTrendingUp className="text-success me-2" size={20} />
                     <h6 className="text-muted mb-0">Total de Receitas</h6>
                   </div>
-                  <h3 className="text-success mb-0">
+                  <h3 className="text-success mb-0" id="total-income">
                     {formatCurrency(currentIncomes + confirmedRecurringIncome)}
                   </h3>
                   <small className="text-muted">
@@ -389,6 +394,7 @@ export default function TransactionsPage() {
             </Col>
             <Col xs={12} md={4}>
               <Card
+                id="card-one-time-income"
                 className="text-center shadow-sm h-100"
                 style={{ borderRadius: "12px" }}
               >
@@ -397,7 +403,7 @@ export default function TransactionsPage() {
                     <FiCalendar className="text-info me-2" size={20} />
                     <h6 className="text-muted mb-0">Receitas Pontuais</h6>
                   </div>
-                  <h3 className="text-info mb-0">
+                  <h3 className="text-info mb-0" id="total-one-time-income">
                     {formatCurrency(currentIncomes)}
                   </h3>
                   <small className="text-muted">
@@ -416,6 +422,7 @@ export default function TransactionsPage() {
             </Col>
             <Col xs={12} md={4}>
               <Card
+                id="card-recurring-income"
                 className="text-center shadow-sm h-100"
                 style={{ borderRadius: "12px" }}
               >
@@ -424,7 +431,7 @@ export default function TransactionsPage() {
                     <FiRepeat className="text-primary me-2" size={20} />
                     <h6 className="text-muted mb-0">Receitas Fixas</h6>
                   </div>
-                  <h3 className="text-primary mb-0">
+                  <h3 className="text-primary mb-0" id="total-recurring-income">
                     {formatCurrency(confirmedRecurringIncome)}
                   </h3>
                   <small className="text-muted">
@@ -448,6 +455,7 @@ export default function TransactionsPage() {
           <>
             <Col xs={12} md={4}>
               <Card
+                id="card-predicted-income"
                 className="text-center shadow-sm h-100"
                 style={{ borderRadius: "12px" }}
               >
@@ -456,7 +464,7 @@ export default function TransactionsPage() {
                     <FiCalendar className="text-success me-2" size={20} />
                     <h6 className="text-muted mb-0">Receitas Previstas</h6>
                   </div>
-                  <h3 className="text-success mb-0">
+                  <h3 className="text-success mb-0" id="total-predicted-income">
                     {formatCurrency(predictedIncome)}
                   </h3>
                   <small className="text-muted">
@@ -471,6 +479,7 @@ export default function TransactionsPage() {
             </Col>
             <Col xs={12} md={4}>
               <Card
+                id="card-predicted-expenses"
                 className="text-center shadow-sm h-100"
                 style={{ borderRadius: "12px" }}
               >
@@ -479,7 +488,7 @@ export default function TransactionsPage() {
                     <FiCalendar className="text-danger me-2" size={20} />
                     <h6 className="text-muted mb-0">Despesas Previstas</h6>
                   </div>
-                  <h3 className="text-danger mb-0">
+                  <h3 className="text-danger mb-0" id="total-predicted-expenses">
                     {formatCurrency(predictedExpense)}
                   </h3>
                   <small className="text-muted">
@@ -494,6 +503,7 @@ export default function TransactionsPage() {
             </Col>
             <Col xs={12} md={4}>
               <Card
+                id="card-predicted-total"
                 className="text-center shadow-sm h-100"
                 style={{ borderRadius: "12px" }}
               >
@@ -502,7 +512,7 @@ export default function TransactionsPage() {
                     <FiDollarSign className="text-info me-2" size={20} />
                     <h6 className="text-muted mb-0">Total de Previsões</h6>
                   </div>
-                  <h3 className="text-info mb-0">
+                  <h3 className="text-info mb-0" id="total-predicted-count">
                     {predictedTransactions.length}
                   </h3>
                   <small className="text-muted">Transações</small>
@@ -514,7 +524,7 @@ export default function TransactionsPage() {
       </Row>
 
       {/* Tabs */}
-      <Card className="shadow-sm mb-4" style={{ borderRadius: "12px" }}>
+      <Card className="shadow-sm mb-4" style={{ borderRadius: "12px" }} id="card-tabs">
         <Card.Header
           style={{
             background: "transparent",
@@ -523,12 +533,14 @@ export default function TransactionsPage() {
           }}
         >
           <Nav
+            id="transaction-tabs"
             variant="tabs"
             activeKey={activeTab}
             onSelect={(k) => setActiveTab(k as TabType)}
           >
             <Nav.Item>
               <Nav.Link
+                id="tab-predicted"
                 eventKey="predicted"
                 className="d-flex align-items-center gap-2"
                 style={{
@@ -552,6 +564,7 @@ export default function TransactionsPage() {
             </Nav.Item>
             <Nav.Item>
               <Nav.Link
+                id="tab-income"
                 eventKey="income"
                 className="d-flex align-items-center gap-2"
                 style={{
@@ -575,6 +588,7 @@ export default function TransactionsPage() {
             </Nav.Item>
             <Nav.Item>
               <Nav.Link
+                id="tab-transactions"
                 eventKey="transactions"
                 className="d-flex align-items-center gap-2"
                 style={{
@@ -1303,7 +1317,7 @@ export default function TransactionsPage() {
                             overflow: "hidden",
                           }}
                         >
-                          <Table hover responsive className="align-middle mb-0">
+                          <Table hover responsive className="align-middle mb-0" id="table-configured-recurring">
                             <thead
                               style={{
                                 background:
@@ -1390,12 +1404,13 @@ export default function TransactionsPage() {
                             </thead>
                             <tbody>
                               {recurringTransactions.map((transaction) => (
-                                <tr key={transaction.id}>
+                                <tr key={transaction.id} id={`configured-recurring-row-${transaction.id}`}>
                                   <td
                                     className="text-center"
                                     style={{ padding: "1rem" }}
                                   >
                                     <Button
+                                      id={`btn-edit-configured-${transaction.id}`}
                                       variant="outline-primary"
                                       size="sm"
                                       className="me-2 mb-1"
@@ -1411,6 +1426,7 @@ export default function TransactionsPage() {
                                       <FiEdit />
                                     </Button>
                                     <Button
+                                      id={`btn-delete-configured-${transaction.id}`}
                                       variant="outline-danger"
                                       size="sm"
                                       className="mb-1"
@@ -1486,10 +1502,16 @@ export default function TransactionsPage() {
                                       }
                                       style={{ fontSize: "1rem" }}
                                     >
-                                      {transaction.type === "income"
-                                        ? "+"
-                                        : "-"}
-                                      {formatCurrency(transaction.value)}
+                                      {transaction.recurrence_type === "variable_by_income" ? (
+                                        `${transaction.value}%`
+                                      ) : (
+                                        <>
+                                          {transaction.type === "income"
+                                            ? "+"
+                                            : "-"}
+                                          {formatCurrency(transaction.value)}
+                                        </>
+                                      )}
                                     </span>
                                   </td>
                                   <td style={{ padding: "1rem" }}>

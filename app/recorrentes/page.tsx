@@ -97,6 +97,7 @@ export default function RecorrentesPage() {
           </p>
         </div>
         <Button
+          id="btn-new-recurring-transaction"
           variant="primary"
           onClick={() => {
             setEditingTransaction(undefined);
@@ -110,32 +111,33 @@ export default function RecorrentesPage() {
         </Button>
       </div>
 
-      <Row className="mb-4">
+      <Row className="mb-4" id="recurring-summary-cards">
         <Col md={4}>
-          <Card className="text-center">
+          <Card className="text-center" id="card-monthly-expenses">
             <Card.Body>
               <h6 className="text-muted mb-2">Despesas Mensais Fixas</h6>
-              <h3 className="text-danger mb-0">
+              <h3 className="text-danger mb-0" id="total-monthly-expense">
                 {formatCurrency(totalMonthlyExpense)}
               </h3>
             </Card.Body>
           </Card>
         </Col>
         <Col md={4}>
-          <Card className="text-center">
+          <Card className="text-center" id="card-monthly-income">
             <Card.Body>
               <h6 className="text-muted mb-2">Receitas Mensais Fixas</h6>
-              <h3 className="text-success mb-0">
+              <h3 className="text-success mb-0" id="total-monthly-income">
                 {formatCurrency(totalMonthlyIncome)}
               </h3>
             </Card.Body>
           </Card>
         </Col>
         <Col md={4}>
-          <Card className="text-center">
+          <Card className="text-center" id="card-monthly-balance">
             <Card.Body>
               <h6 className="text-muted mb-2">Saldo Mensal Previsto</h6>
               <h3
+                id="total-monthly-balance"
                 className={
                   totalMonthlyIncome - totalMonthlyExpense >= 0
                     ? "text-success"
@@ -149,16 +151,17 @@ export default function RecorrentesPage() {
         </Col>
       </Row>
 
-      <Card className="mb-4">
+      <Card className="mb-4" id="card-active-transactions">
         <Card.Header>
           <h5 className="mb-0">Transações Ativas</h5>
         </Card.Header>
         <Card.Body className="p-0">
           {activeTransactions.length === 0 ? (
-            <div className="text-center py-5">
+            <div className="text-center py-5" id="empty-active-transactions">
               <FiCalendar size={48} className="text-muted mb-3" />
               <p className="text-muted">Nenhuma transação recorrente ativa</p>
               <Button
+                id="btn-create-first-transaction"
                 variant="primary"
                 size="sm"
                 onClick={() => setShowForm(true)}
@@ -174,7 +177,7 @@ export default function RecorrentesPage() {
                 overflow: "hidden",
               }}
             >
-              <Table hover responsive className="align-middle mb-0">
+              <Table hover responsive className="align-middle mb-0" id="table-active-transactions">
                 <thead
                   style={{
                     background:
@@ -260,9 +263,10 @@ export default function RecorrentesPage() {
                 </thead>
                 <tbody>
                   {activeTransactions.map((transaction) => (
-                    <tr key={transaction.id}>
+                    <tr key={transaction.id} id={`recurring-row-${transaction.id}`}>
                       <td className="text-center" style={{ padding: "1rem" }}>
                         <Button
+                          id={`btn-edit-${transaction.id}`}
                           variant="outline-primary"
                           size="sm"
                           className="me-2 mb-1"
@@ -273,6 +277,7 @@ export default function RecorrentesPage() {
                           <FiEdit2 />
                         </Button>
                         <Button
+                          id={`btn-delete-${transaction.id}`}
                           variant="outline-danger"
                           size="sm"
                           className="mb-1"
@@ -314,6 +319,7 @@ export default function RecorrentesPage() {
                       </td>
                       <td className="text-end" style={{ padding: "1rem" }}>
                         <span
+                          id={`value-${transaction.id}`}
                           className={
                             transaction.type === "income"
                               ? "text-success fw-bold"
@@ -321,12 +327,19 @@ export default function RecorrentesPage() {
                           }
                           style={{ fontSize: "1rem" }}
                         >
-                          {transaction.type === "income" ? "+" : "-"}
-                          {formatCurrency(transaction.value)}
+                          {transaction.recurrence_type === "variable_by_income" ? (
+                            `${transaction.value}%`
+                          ) : (
+                            <>
+                              {transaction.type === "income" ? "+" : "-"}
+                              {formatCurrency(transaction.value)}
+                            </>
+                          )}
                         </span>
                       </td>
                       <td style={{ padding: "1rem" }}>
                         <Badge
+                          id={`recurrence-${transaction.id}`}
                           bg="primary"
                           style={{
                             padding: "6px 12px",
@@ -356,7 +369,7 @@ export default function RecorrentesPage() {
       </Card>
 
       {inactiveTransactions.length > 0 && (
-        <Card>
+        <Card id="card-inactive-transactions">
           <Card.Header>
             <h5 className="mb-0">Transações Inativas</h5>
           </Card.Header>
@@ -368,7 +381,7 @@ export default function RecorrentesPage() {
                 overflow: "hidden",
               }}
             >
-              <Table hover responsive className="align-middle mb-0">
+              <Table hover responsive className="align-middle mb-0" id="table-inactive-transactions">
                 <thead
                   style={{
                     background:
@@ -436,9 +449,10 @@ export default function RecorrentesPage() {
                 </thead>
                 <tbody>
                   {inactiveTransactions.map((transaction) => (
-                    <tr key={transaction.id} className="text-muted">
+                    <tr key={transaction.id} className="text-muted" id={`inactive-row-${transaction.id}`}>
                       <td className="text-center" style={{ padding: "1rem" }}>
                         <Button
+                          id={`btn-edit-inactive-${transaction.id}`}
                           variant="outline-primary"
                           size="sm"
                           className="me-2 mb-1"
@@ -449,6 +463,7 @@ export default function RecorrentesPage() {
                           <FiEdit2 />
                         </Button>
                         <Button
+                          id={`btn-delete-inactive-${transaction.id}`}
                           variant="outline-danger"
                           size="sm"
                           className="mb-1"
@@ -490,6 +505,7 @@ export default function RecorrentesPage() {
                       </td>
                       <td className="text-end" style={{ padding: "1rem" }}>
                         <span
+                          id={`value-inactive-${transaction.id}`}
                           className={
                             transaction.type === "income"
                               ? "text-success fw-bold"
@@ -497,12 +513,19 @@ export default function RecorrentesPage() {
                           }
                           style={{ fontSize: "1rem" }}
                         >
-                          {transaction.type === "income" ? "+" : "-"}
-                          {formatCurrency(transaction.value)}
+                          {transaction.recurrence_type === "variable_by_income" ? (
+                            `${transaction.value}%`
+                          ) : (
+                            <>
+                              {transaction.type === "income" ? "+" : "-"}
+                              {formatCurrency(transaction.value)}
+                            </>
+                          )}
                         </span>
                       </td>
                       <td style={{ padding: "1rem" }}>
                         <Badge
+                          id={`recurrence-inactive-${transaction.id}`}
                           bg="primary"
                           style={{
                             padding: "6px 12px",
