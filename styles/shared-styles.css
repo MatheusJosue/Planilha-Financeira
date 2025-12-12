@@ -1,0 +1,146 @@
+/* Common styles for the finance application */
+
+/* Card styles */
+.card-gradient-border {
+  border: 2px solid transparent;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.card-gradient-border::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 12px;
+  z-index: -1;
+}
+
+.card-shadow {
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Button styles */
+.btn-gradient {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 12px 24px !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+}
+
+.btn-gradient:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0.5rem 1.5rem rgba(102, 126, 234, 0.4) !important;
+}
+
+.gradient-bg {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+/* Card with gradient background */
+.card-gradient {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 12px;
+}
+
+/* Period card styles */
+.period-card {
+  border: 2px solid rgba(220, 53, 69, 0.2) !important;
+  border-radius: 12px !important;
+}
+
+.period-card-header {
+  background: linear-gradient(135deg, rgba(220, 53, 69, 0.15) 0%, rgba(214, 51, 132, 0.1) 100%) !important;
+  border-bottom: 2px solid rgba(220, 53, 69, 0.2) !important;
+  border-radius: 12px 12px 0 0 !important;
+  padding: 1rem !important;
+}
+
+/* Tab styles */
+.nav-tab-gradient {
+  border-radius: 12px 12px 0 0 !important;
+  font-weight: 500 !important;
+  padding: 12px 20px !important;
+  border: none !important;
+  transition: all 0.3s ease !important;
+  margin-right: 4px !important;
+}
+
+.nav-tab-gradient.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+}
+
+/* Animation */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+}
+
+/* Common spacing */
+.mb-4-important {
+  margin-bottom: 1.5rem !important;
+}
+
+/* Shadow card */
+.shadow-card {
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Radius 12px */
+.radius-12 {
+  border-radius: 12px !important;
+}
+
+/* Input styles */
+.input-gradient-border {
+  border-radius: 10px !important;
+  border: 2px solid #667eea !important;
+  padding: 12px !important;
+  font-size: 1.1rem !important;
+  font-weight: bold !important;
+  text-align: center !important;
+}
+
+/* Badge styles */
+.badge-radius-8 {
+  border-radius: 8px !important;
+  font-size: 1rem !important;
+  padding: 0.5rem 1rem !important;
+}
+
+/* Background opacity */
+.bg-opacity-5 {
+  background-color: rgba(102, 126, 234, 0.05) !important;
+}
+
+.border-opacity-2 {
+  border-color: rgba(102, 126, 234, 0.2) !important;
+}

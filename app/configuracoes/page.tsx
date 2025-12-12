@@ -20,6 +20,10 @@ import {
   showConfirm,
 } from "@/lib/sweetalert";
 import { parseCurrency } from "@/utils/formatCurrency";
+import { UserSettingsProvider, useUserSettings } from "@/components/UserSettingsProvider";
+import { GradientCard } from "@/components/GradientCard";
+import { PageLayout } from "@/components/PageLayout";
+import { PeriodSeparationSettings } from "@/components/PeriodSeparationSettings";
 
 interface ImportedRecurringTransaction {
   description: string;
@@ -49,7 +53,7 @@ interface ImportData {
   realTransactions?: ImportedTransaction[];
 }
 
-export default function SettingsPage() {
+const SettingsPageContent = () => {
   const {
     transactions,
     categories,
@@ -60,75 +64,21 @@ export default function SettingsPage() {
     clearAllData,
   } = useFinanceStore();
 
+  const {
+    periodSeparationEnabled,
+    period1End,
+    period2Start,
+    dashboardCards,
+    setPeriodSeparationEnabled,
+    setPeriod1End,
+    setPeriod2Start,
+    setDashboardCards,
+  } = useUserSettings();
+
   const [newCategory, setNewCategory] = useState("");
   const [maxPercentage, setMaxPercentage] = useState("");
   const [maxValue, setMaxValue] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Configuração de períodos
-  const [periodSeparationEnabled, setPeriodSeparationEnabled] = useState(false);
-  const [period1End, setPeriod1End] = useState(15);
-  const [period2Start, setPeriod2Start] = useState(16);
-
-  // Configuração do Dashboard
-  const [dashboardCards, setDashboardCards] = useState({
-    balance: true,
-    monthlyIncome: true,
-    monthlyExpense: true,
-    periodCards: true,
-    charts: true,
-    recentTransactions: true,
-    // Individual chart settings
-    expensesByCategory: true,
-    incomeVsExpense: true,
-    recurringVsVariable: true,
-    futureProjection: true,
-    financialStats: true,
-  });
-
-  // Carregar configurações do banco de dados
-  useEffect(() => {
-    loadUserSettings();
-  }, []);
-
-  const loadUserSettings = async () => {
-    try {
-      const supabaseClient = (
-        await import("@/lib/supabase-client")
-      ).createClient();
-      const {
-        data: { user },
-      } = await supabaseClient.auth.getUser();
-
-      if (!user) {
-        return;
-      }
-
-      // Buscar configurações do usuário
-      const { data: settings, error } = await supabaseClient
-        .from("user_settings")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
-
-      if (error && error.code !== "PGRST116") {
-        console.error("Erro ao carregar configurações:", error);
-        return;
-      }
-
-      if (settings) {
-        setPeriodSeparationEnabled(settings.period_separation_enabled || false);
-        setPeriod1End(settings.period_1_end || 15);
-        setPeriod2Start(settings.period_2_start || 16);
-
-        if (settings.dashboard_config) {
-          setDashboardCards(settings.dashboard_config);
-        }
-      }
-    } catch (error) {
-      console.error("Erro ao carregar configurações:", error);
-    }
-  };
 
   const saveUserSettings = useCallback(async () => {
     try {
@@ -1523,3 +1473,15 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+const ConfiguracoesPage = () => {
+  return (
+    <UserSettingsProvider>
+      <PageLayout title="Configurações" subtitle="Gerencie backup, categorias e dados da aplicação">
+        <SettingsPageContent />
+      </PageLayout>
+    </UserSettingsProvider>
+  );
+};
+
+export default ConfiguracoesPage;
