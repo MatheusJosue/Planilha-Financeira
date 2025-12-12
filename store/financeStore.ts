@@ -315,11 +315,8 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
 
         const hasRealTransaction = monthsData[month].transactions.some(existing => {
           if (existing.is_predicted) return false;
-
           if (!t.recurring_id) return false;
-
           if (existing.recurring_id !== t.recurring_id) return false;
-
           if (existing.date.substring(0, 7) !== t.date.substring(0, 7)) return false;
 
           if (t.current_installment && t.total_installments) {
@@ -332,7 +329,6 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
 
         const hasPredictedTransaction = monthsData[month].transactions.some(existing => {
           if (!existing.is_predicted) return false;
-
           return existing.id === t.id;
         });
 
@@ -923,10 +919,6 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
 
   generatePredictedTransactions: (monthsAhead: number = 12): Transaction[] => {
     const state = get();
-
-    console.log('DEBUG: Total recurring transactions:', state.recurringTransactions.length);
-    console.log('DEBUG: Total regular transactions:', state.transactions.length);
-
     const predicted: Transaction[] = [];
     const today = new Date();
 
@@ -936,9 +928,20 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       }
 
       const startDate = new Date(recurring.start_date);
+      const endDate = recurring.end_date ? new Date(recurring.end_date) : null;
 
       for (let i = 0; i <= monthsAhead; i++) {
         const targetDate = new Date(today.getFullYear(), today.getMonth() + i, recurring.day_of_month);
+
+        // Skip if before start date
+        if (targetDate < startDate) {
+          continue;
+        }
+
+        // Skip if after end date
+        if (endDate && targetDate > endDate) {
+          continue;
+        }
 
         const month = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`;
         const dateStr = `${month}-${String(targetDate.getDate()).padStart(2, '0')}`;
@@ -947,6 +950,14 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
           ? (targetDate.getFullYear() - startDate.getFullYear()) * 12 +
             (targetDate.getMonth() - startDate.getMonth()) + 1
           : undefined;
+
+        // Skip if installment exceeds total
+        if (recurring.recurrence_type === 'installment' &&
+            currentInstallment &&
+            recurring.total_installments &&
+            currentInstallment > recurring.total_installments) {
+          continue;
+        }
 
         let calculatedValue = typeof recurring.value === 'string' ? parseFloat(recurring.value) : Number(recurring.value);
 
@@ -969,9 +980,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
               .reduce((sum, t) => sum + t.value, 0);
           }
 
-          // Calculate the percentage value
           calculatedValue = (incomeValue * recurring.value) / 100;
-          console.log(`DEBUG: Calculated value for variable_by_income: ${calculatedValue}`);
         }
 
         const predictedTransaction = {
@@ -989,7 +998,6 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
           total_installments: recurring.total_installments,
         };
 
-        console.log(`DEBUG: Created predicted transaction: ${predictedTransaction.description}, value: ${predictedTransaction.value}, date: ${predictedTransaction.date}`);
         predicted.push(predictedTransaction);
       }
     });
