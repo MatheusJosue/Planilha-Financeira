@@ -20,8 +20,11 @@ export default function RecurringTransactionForm({
   transaction,
   defaultType = "expense",
 }: RecurringTransactionFormProps) {
-  const { categories, addRecurringTransaction, updateRecurringTransaction } =
+  const { categories, transactions, addRecurringTransaction, updateRecurringTransaction } =
     useFinanceStore();
+
+  // Get only income transactions to calculate the percentage
+  const incomeTransactions = transactions.filter(t => t.type === "income");
 
   const getInitialFormData = () => {
     if (transaction) {
@@ -62,11 +65,24 @@ export default function RecurringTransactionForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    let parsedValue = 0;
+    // For variable_by_income type, the value represents a percentage (should be between 0 and 100)
+    if (formData.recurrence_type === "variable_by_income") {
+      const percentage = parseFloat(formData.value);
+      if (isNaN(percentage) || percentage < 0 || percentage > 100) {
+        alert("A porcentagem deve estar entre 0 e 100");
+        return;
+      }
+      parsedValue = percentage; // Store the percentage value as the main value
+    } else {
+      parsedValue = parseCurrency(formData.value);
+    }
+
     const data: Omit<RecurringTransaction, "id" | "user_id" | "created_at"> = {
       description: formData.description,
       type: formData.type,
       category: formData.category,
-      value: parseCurrency(formData.value),
+      value: parsedValue,
       recurrence_type: formData.recurrence_type,
       start_date: formData.start_date,
       day_of_month: parseInt(formData.day_of_month),
@@ -98,6 +114,8 @@ export default function RecurringTransactionForm({
   const gradientColors = isIncome
     ? "linear-gradient(135deg, #198754 0%, #20c997 100%)"
     : "linear-gradient(135deg, #dc3545 0%, #d63384 100%)";
+
+  const isVariableByIncome = formData.recurrence_type === "variable_by_income";
 
   return (
     <Modal show={show} onHide={onHide} size="lg" centered>
@@ -155,6 +173,9 @@ export default function RecurringTransactionForm({
                   <option value="variable">
                     📈 Variável Mensal (ex: luz, água)
                   </option>
+                  <option value="variable_by_income">
+                    💰 Variável por renda (ex: imposto sobre renda)
+                  </option>
                 </Form.Select>
               </Form.Group>
             </Col>
@@ -188,35 +209,115 @@ export default function RecurringTransactionForm({
                 <Form.Label
                   style={{ color: "var(--foreground)", fontWeight: 500 }}
                 >
-                  Valor
+                  {isVariableByIncome ? "Percentual sobre renda (%)" : "Valor"}
                 </Form.Label>
-                <InputGroup>
-                  <InputGroup.Text
-                    style={{
-                      backgroundColor: "var(--input-bg)",
-                      color: "var(--foreground)",
-                      borderColor: "var(--border-color)",
-                    }}
-                  >
-                    R$
-                  </InputGroup.Text>
-                  <Form.Control
-                    type="text"
-                    value={formData.value}
-                    onChange={(e) =>
-                      setFormData({ ...formData, value: e.target.value })
-                    }
-                    placeholder="Ex: 45,00"
-                    required
-                    style={{
-                      backgroundColor: "var(--input-bg)",
-                      color: "var(--foreground)",
-                      borderColor: "var(--border-color)",
-                    }}
-                  />
-                </InputGroup>
+                {isVariableByIncome ? (
+                  <InputGroup>
+                    <Form.Control
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      value={formData.value}
+                      onChange={(e) =>
+                        setFormData({ ...formData, value: e.target.value })
+                      }
+                      placeholder="Ex: 15 (para 15%)"
+                      required
+                      style={{
+                        backgroundColor: "var(--input-bg)",
+                        color: "var(--foreground)",
+                        borderColor: "var(--border-color)",
+                      }}
+                    />
+                    <InputGroup.Text
+                      style={{
+                        backgroundColor: "var(--input-bg)",
+                        color: "var(--foreground)",
+                        borderColor: "var(--border-color)",
+                      }}
+                    >
+                      %
+                    </InputGroup.Text>
+                  </InputGroup>
+                ) : (
+                  <InputGroup>
+                    <InputGroup.Text
+                      style={{
+                        backgroundColor: "var(--input-bg)",
+                        color: "var(--foreground)",
+                        borderColor: "var(--border-color)",
+                      }}
+                    >
+                      R$
+                    </InputGroup.Text>
+                    <Form.Control
+                      type="text"
+                      value={formData.value}
+                      onChange={(e) =>
+                        setFormData({ ...formData, value: e.target.value })
+                      }
+                      placeholder="Ex: 45,00"
+                      required
+                      style={{
+                        backgroundColor: "var(--input-bg)",
+                        color: "var(--foreground)",
+                        borderColor: "var(--border-color)",
+                      }}
+                    />
+                  </InputGroup>
+                )}
+                {isVariableByIncome && (
+                  <Form.Text style={{ color: "var(--muted-foreground)" }}>
+                    Este percentual será aplicado sobre a soma da sua renda mensal
+                  </Form.Text>
+                )}
               </Form.Group>
             </Col>
+
+            {isVariableByIncome && (
+              <Col md={12} className="mb-3">
+                <Form.Group>
+                  <Form.Label
+                    style={{ color: "var(--foreground)", fontWeight: 500 }}
+                  >
+                    Renda Mensal Atual
+                  </Form.Label>
+                  <div
+                    style={{
+                      backgroundColor: "var(--input-bg)",
+                      color: "var(--foreground)",
+                      border: "1px solid var(--border-color)",
+                      borderRadius: "6px",
+                      padding: "10px 12px",
+                      minHeight: "40px",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    {incomeTransactions.length > 0 ? (
+                      <div>
+                        <div>
+                          <strong>Total:</strong> {incomeTransactions.reduce((sum, t) => sum + t.value, 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </div>
+                        <div className="mt-1">
+                          <small className="text-muted">
+                            {incomeTransactions.length} transações de renda registradas
+                          </small>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-muted">
+                        Nenhuma transação de renda encontrada
+                      </div>
+                    )}
+                  </div>
+                  <Form.Text style={{ color: "var(--muted-foreground)" }}>
+                    Valor base para cálculo do percentual
+                  </Form.Text>
+                </Form.Group>
+              </Col>
+            )}
 
             <Col md={12} className="mb-3">
               <Form.Group>

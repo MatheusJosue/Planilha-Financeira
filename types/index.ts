@@ -1,9 +1,10 @@
 export type TransactionType = "income" | "expense";
 
-export type RecurrenceType = 
+export type RecurrenceType =
   | "fixed"
   | "installment"
-  | "variable";
+  | "variable"
+  | "variable_by_income";
 
 export interface Transaction {
   id: string;

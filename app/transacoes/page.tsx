@@ -143,6 +143,11 @@ export default function TransactionsPage() {
     setConfirmingTransaction(null);
   };
 
+  const handleEditRecurring = (transaction: RecurringTransaction) => {
+    setEditingRecurring(transaction);
+    setShowRecurringForm(true);
+  };
+
   const handleCloseForm = () => {
     setShowForm(false);
     setEditingTransaction(null);
@@ -1395,7 +1400,7 @@ export default function TransactionsPage() {
                                       size="sm"
                                       className="me-2 mb-1"
                                       onClick={() =>
-                                        setEditingRecurring(transaction)
+                                        handleEditRecurring(transaction)
                                       }
                                       style={{
                                         borderRadius: "8px",
@@ -1512,6 +1517,8 @@ export default function TransactionsPage() {
                                             }`;
                                           case "variable":
                                             return "Variável Mensal";
+                                          case "variable_by_income":
+                                            return "Variável por Renda";
                                         }
                                       })()}
                                     </Badge>

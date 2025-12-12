@@ -29,10 +29,13 @@ export function TransactionForm({
 }: TransactionFormProps) {
   const {
     categories,
+    transactions,
     addTransaction,
     updateTransaction,
     addRecurringTransaction,
   } = useFinanceStore();
+
+  const incomeTransactions = transactions.filter(t => t.type === "income");
 
   const getInitialFormData = useCallback(() => {
     if (transaction) {
@@ -75,12 +78,27 @@ export function TransactionForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const value = parseCurrency(formData.value);
-    if (isNaN(value) || value <= 0) {
-      showWarning("Por favor, insira um valor válido");
-      return;
+    let value: number;
+
+    // Validate and parse value based on transaction type
+    if (formData.isRecurring && formData.recurrence_type === "variable_by_income") {
+      // For variable_by_income type, the value represents a percentage
+      const percentage = parseFloat(formData.value);
+      if (isNaN(percentage) || percentage < 0 || percentage > 100) {
+        showWarning("Por favor, insira um percentual válido (0-100)");
+        return;
+      }
+      value = percentage;
+    } else {
+      // For all other types (regular transactions and other recurring types), parse as currency
+      value = parseCurrency(formData.value);
+      if (isNaN(value) || value <= 0) {
+        showWarning("Por favor, insira um valor válido");
+        return;
+      }
     }
 
+    // Validate description
     if (!formData.description.trim()) {
       showWarning("Por favor, insira uma descrição");
       return;
@@ -103,7 +121,7 @@ export function TransactionForm({
           type: formData.type,
           category: formData.category,
           value,
-          recurrence_type: formData.recurrence_type,
+          recurrence_type: formData.recurrence_type as RecurrenceType,
           start_date: formData.date,
           day_of_month: parseInt(formData.day_of_month),
           is_active: true,
@@ -113,6 +131,7 @@ export function TransactionForm({
             : undefined,
         });
       } else {
+        // This is where regular transactions should be added
         addTransaction({
           description: formData.description,
           type: formData.type,
@@ -124,6 +143,13 @@ export function TransactionForm({
     }
 
     onHide();
+  };
+
+  const isVariableByIncome = formData.isRecurring && formData.recurrence_type === "variable_by_income";
+  const currentValueLabel = isVariableByIncome ? "Percentual sobre renda (%)" : "Valor";
+
+  const handleValueChange = (value: string) => {
+    setFormData({ ...formData, value });
   };
 
   return (
@@ -187,20 +213,107 @@ export function TransactionForm({
 
           <Row className="mb-3">
             <Col md={12}>
-              <CurrencyInput
-                label="Valor"
-                value={formData.value}
-                onChange={(value) => setFormData({ ...formData, value })}
-                labelStyle={{ color: "var(--foreground)" }}
-                style={{
-                  backgroundColor: "var(--input-bg)",
-                  color: "var(--foreground)",
-                  borderColor: "var(--border-color)",
-                }}
-                required
-              />
+              {isVariableByIncome ? (
+                <Form.Group>
+                  <Form.Label
+                    style={{ color: "var(--foreground)", fontWeight: 500 }}
+                  >
+                    {currentValueLabel}
+                  </Form.Label>
+                  <div className="d-flex align-items-center">
+                    <Form.Control
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      value={formData.value}
+                      onChange={(e) => handleValueChange(e.target.value)}
+                      placeholder="Ex: 15 (para 15%)"
+                      required
+                      style={{
+                        backgroundColor: "var(--input-bg)",
+                        color: "var(--foreground)",
+                        borderColor: "var(--border-color)",
+                      }}
+                    />
+                    <span
+                      className="ms-2"
+                      style={{
+                        backgroundColor: "var(--input-bg)",
+                        color: "var(--foreground)",
+                        padding: "0.375rem 0.75rem",
+                        border: "1px solid var(--border-color)",
+                        borderLeft: "none",
+                        borderRadius: "0 4px 4px 0",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      %
+                    </span>
+                  </div>
+                </Form.Group>
+              ) : (
+                <CurrencyInput
+                  label={currentValueLabel}
+                  value={formData.value}
+                  onChange={handleValueChange}
+                  labelStyle={{ color: "var(--foreground)" }}
+                  style={{
+                    backgroundColor: "var(--input-bg)",
+                    color: "var(--foreground)",
+                    borderColor: "var(--border-color)",
+                  }}
+                  required
+                />
+              )}
             </Col>
           </Row>
+
+          {isVariableByIncome && (
+            <Row className="mb-3">
+              <Col md={12}>
+                <Form.Group>
+                  <Form.Label
+                    style={{ color: "var(--foreground)", fontWeight: 500 }}
+                  >
+                    Renda Mensal Atual
+                  </Form.Label>
+                  <div
+                    style={{
+                      backgroundColor: "var(--input-bg)",
+                      color: "var(--foreground)",
+                      border: "1px solid var(--border-color)",
+                      borderRadius: "6px",
+                      padding: "10px 12px",
+                      minHeight: "40px",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    {incomeTransactions.length > 0 ? (
+                      <div>
+                        <div>
+                          <strong>Total:</strong> {incomeTransactions.reduce((sum, t) => sum + t.value, 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </div>
+                        <div className="mt-1">
+                          <small className="text-muted">
+                            {incomeTransactions.length} transações de renda registradas
+                          </small>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-muted">
+                        Nenhuma transação de renda encontrada
+                      </div>
+                    )}
+                  </div>
+                  <Form.Text style={{ color: "var(--muted-foreground)" }}>
+                    Valor base para cálculo do percentual
+                  </Form.Text>
+                </Form.Group>
+              </Col>
+            </Row>
+          )}
 
           <Row className="mb-3">
             <Col md={12}>
@@ -265,6 +378,9 @@ export function TransactionForm({
                       </option>
                       <option value="variable">
                         📈 Variável Mensal (ex: luz, água)
+                      </option>
+                      <option value="variable_by_income">
+                        💰 Variável por renda (ex: imposto sobre renda)
                       </option>
                     </Form.Select>
                   </Form.Group>

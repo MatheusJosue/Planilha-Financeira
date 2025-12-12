@@ -66,6 +66,8 @@ export default function RecorrentesPage() {
         }`;
       case "variable":
         return "Variável Mensal";
+      case "variable_by_income":
+        return "Variável por Renda";
     }
   };
 

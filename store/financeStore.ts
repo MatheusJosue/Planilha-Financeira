@@ -261,8 +261,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
 
       await get().loadRecurringTransactions();
 
-
-      const predictedTransactions = get().generatePredictedTransactions(12);
+      const allTransactions: Transaction[] = [];
 
       if (transactionsData && transactionsData.length > 0) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -272,7 +271,6 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
             monthsData[month] = { transactions: [] };
           }
 
-          // Processar valor corretamente
           let numValue: number;
           if (typeof t.value === 'string') {
             const cleanValue = t.value.replace(/\./g, '').replace(',', '.');
@@ -281,7 +279,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
             numValue = Number(t.value) || 0;
           }
 
-          monthsData[month].transactions.push({
+          const transaction: Transaction = {
             id: t.id,
             description: t.description,
             type: t.type as 'income' | 'expense',
@@ -292,15 +290,20 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
             is_predicted: false,
             current_installment: t.current_installment,
             total_installments: t.total_installments,
-          });
+          };
+
+          monthsData[month].transactions.push(transaction);
+          allTransactions.push(transaction);
         });
       }
 
-      // Filtrar transações previstas que foram excluídas antes de adicionar
+      set({ transactions: allTransactions });
+
+      const predictedTransactions = get().generatePredictedTransactions(12);
+
       const excludedIds = get().excludedPredictedIds;
 
       predictedTransactions.forEach((t) => {
-        // Pular se foi excluída pelo usuário
         if (excludedIds.includes(t.id)) {
           return;
         }
@@ -310,36 +313,26 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
           monthsData[month] = { transactions: [] };
         }
 
-        // Check if a real transaction already exists for this predicted transaction
         const hasRealTransaction = monthsData[month].transactions.some(existing => {
-          // Must not be predicted
           if (existing.is_predicted) return false;
 
-          // If no recurring_id, it's not from recurring transactions, so don't filter
           if (!t.recurring_id) return false;
 
-          // Must have the same recurring_id
           if (existing.recurring_id !== t.recurring_id) return false;
 
-          // Must be in the same month
           if (existing.date.substring(0, 7) !== t.date.substring(0, 7)) return false;
 
-          // For installments, also check the installment number
           if (t.current_installment && t.total_installments) {
             return existing.current_installment === t.current_installment &&
                    existing.total_installments === t.total_installments;
           }
 
-          // For regular recurring transactions, matching recurring_id and same month is enough
           return true;
         });
 
-        // Also check if the same predicted transaction already exists in the month data
         const hasPredictedTransaction = monthsData[month].transactions.some(existing => {
-          // Only compare with predicted transactions
           if (!existing.is_predicted) return false;
 
-          // Check if it's the same predicted transaction by ID
           return existing.id === t.id;
         });
 
@@ -352,7 +345,6 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
         monthsData[currentMonth] = { transactions: [] };
       }
 
-      // Restaurar o mês salvo se existir
       const savedMonth = loadSavedMonth();
       const monthToUse = savedMonth && monthsData[savedMonth] ? savedMonth : currentMonth;
 
@@ -799,6 +791,8 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       return;
     }
 
+    console.log('DEBUG: About to add recurring transaction:', { ...recurring, user_id: user.id });
+
     const { data, error } = await supabaseClient
       .from('recurring_transactions')
       .insert([{ ...recurring, user_id: user.id }])
@@ -806,14 +800,20 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       .single();
 
     if (error) {
+      console.error("Error adding recurring transaction:", error);
       showError("Erro ao criar transação recorrente");
-      console.error(error);
       return;
     }
 
-    set((state) => ({
-      recurringTransactions: [...state.recurringTransactions, data],
-    }));
+    console.log('DEBUG: Successfully added recurring transaction to database:', data);
+
+    set((state) => {
+      const newState = {
+        recurringTransactions: [...state.recurringTransactions, data],
+      };
+      console.log('DEBUG: Updated recurring transactions state with new length:', newState.recurringTransactions.length);
+      return newState;
+    });
 
     // Reload data to generate predicted transactions
     await get().loadFromSupabase();
@@ -926,11 +926,26 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
 
   generatePredictedTransactions: (monthsAhead: number = 12): Transaction[] => {
     const state = get();
+
+    console.log('DEBUG: Generating predicted transactions...');
+    console.log('DEBUG: Total recurring transactions:', state.recurringTransactions.length);
+    console.log('DEBUG: Total regular transactions:', state.transactions.length);
+    console.log('DEBUG: Sample recurring transactions:', state.recurringTransactions.slice(0, 3).map(r => ({
+      id: r.id,
+      description: r.description,
+      type: r.recurrence_type,
+      value: r.value,
+      day_of_month: r.day_of_month,
+      is_active: r.is_active
+    })));
+
     const predicted: Transaction[] = [];
     const today = new Date();
 
     state.recurringTransactions.forEach((recurring) => {
+      console.log('DEBUG: Processing recurring transaction:', recurring);
       if (!recurring.is_active) {
+        console.log(`DEBUG: Skipping inactive recurring transaction: ${recurring.description}`);
         return;
       }
 
@@ -939,13 +954,22 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       for (let i = 0; i <= monthsAhead; i++) {
         const targetDate = new Date(today.getFullYear(), today.getMonth() + i, recurring.day_of_month);
 
-        if (targetDate < startDate) continue;
-        if (recurring.end_date && targetDate > new Date(recurring.end_date)) continue;
+        if (targetDate < startDate) {
+          console.log(`DEBUG: Skipping due to start date, target: ${targetDate.toISOString()}, start: ${startDate.toISOString()}`);
+          continue;
+        }
+        if (recurring.end_date && targetDate > new Date(recurring.end_date)) {
+          console.log(`DEBUG: Skipping due to end date, target: ${targetDate.toISOString()}, end: ${recurring.end_date}`);
+          continue;
+        }
 
         if (recurring.recurrence_type === 'installment' && recurring.total_installments) {
           const monthsSinceStart = (targetDate.getFullYear() - startDate.getFullYear()) * 12 +
                                    (targetDate.getMonth() - startDate.getMonth());
-          if (monthsSinceStart >= recurring.total_installments) continue;
+          if (monthsSinceStart >= recurring.total_installments) {
+            console.log(`DEBUG: Skipping installment due to completed payments, monthsSinceStart: ${monthsSinceStart}, total_installments: ${recurring.total_installments}`);
+            continue;
+          }
         }
 
         const month = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`;
@@ -957,6 +981,25 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
             (targetDate.getMonth() - startDate.getMonth()) + 1
           : undefined;
 
+        let calculatedValue = typeof recurring.value === 'string' ? parseFloat(recurring.value) : Number(recurring.value);
+
+        if (recurring.recurrence_type === 'variable_by_income') {
+          console.log(`DEBUG: Calculating variable_by_income for month: ${month}`);
+          // Calculate the total income for the target month
+          const targetMonthIncome = state.transactions
+            .filter(t =>
+              t.type === 'income' &&
+              t.date.startsWith(month)
+            )
+            .reduce((sum, t) => sum + t.value, 0);
+
+          console.log(`DEBUG: Target month income for ${month}: ${targetMonthIncome}, percentage: ${recurring.value}`);
+
+          // Calculate the percentage value
+          calculatedValue = (targetMonthIncome * recurring.value) / 100;
+          console.log(`DEBUG: Calculated value for variable_by_income: ${calculatedValue}`);
+        }
+
         const predictedTransaction = {
           id: `predicted-${recurring.id}-${month}`,
           description: recurring.recurrence_type === 'installment'
@@ -964,7 +1007,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
             : recurring.description,
           type: recurring.type as 'income' | 'expense',
           category: recurring.category,
-          value: typeof recurring.value === 'string' ? parseFloat(recurring.value) : Number(recurring.value),
+          value: calculatedValue,
           date: dateStr,
           recurring_id: recurring.id,
           is_predicted: true,
@@ -972,13 +1015,27 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
           total_installments: recurring.total_installments,
         };
 
+        console.log(`DEBUG: Created predicted transaction: ${predictedTransaction.description}, value: ${predictedTransaction.value}, date: ${predictedTransaction.date}`);
         predicted.push(predictedTransaction);
       }
     });
 
+    console.log(`DEBUG: Total predicted transactions before filtering: ${predicted.length}`);
+
     // Filtrar as transações que foram excluídas pelo usuário
     const excludedIds = state.excludedPredictedIds;
-    return predicted.filter(predicted => !excludedIds.includes(predicted.id));
+    const filteredPredicted = predicted.filter(predicted => !excludedIds.includes(predicted.id));
+
+    console.log(`DEBUG: Total predicted transactions after filtering excluded IDs: ${filteredPredicted.length}`);
+    console.log('DEBUG: Sample of final predicted transactions:', filteredPredicted.slice(0, 3).map(p => ({
+      id: p.id,
+      description: p.description,
+      value: p.value,
+      date: p.date,
+      recurring_id: p.recurring_id
+    })));
+
+    return filteredPredicted;
   },
 }));
 
