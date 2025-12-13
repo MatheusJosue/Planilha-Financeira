@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { Transaction, FinanceData, DEFAULT_CATEGORIES, RecurringTransaction } from "@/types";
 import { createClient } from "@/lib/supabase-client";
 import { showError, showSuccess, showErrorToast, showSuccessToast } from "@/lib/sweetalert";
+import { getMonthsToLoad } from "@/utils/dashboardConfigHelper";
 
 interface MonthData {
   transactions: Transaction[];
@@ -16,11 +17,11 @@ interface FinanceStore extends FinanceData {
   hiddenDefaultCategories: string[];
   excludedPredictedIds: string[];
   showMonthPicker: boolean;
-  setCurrentMonth: (month: string) => void;
+  setCurrentMonth: (month: string) => Promise<void>;
   createNewMonth: (month: string, copyFromPrevious?: boolean) => Promise<void>;
   getAvailableMonths: () => string[];
   toggleShowMonthPicker: (show: boolean) => void;
-  loadFromSupabase: () => Promise<void>;
+  loadFromSupabase: (monthsToLoad?: number) => Promise<void>;
   addTransaction: (transaction: Omit<Transaction, "id">) => Promise<void>;
   updateTransaction: (id: string, transaction: Partial<Transaction>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
@@ -64,6 +65,27 @@ const saveCurrentMonth = (month: string) => {
   }
 };
 
+// Carregar meses vazios do localStorage
+const loadEmptyMonths = (): string[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const stored = localStorage.getItem('emptyMonths');
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+// Salvar meses vazios no localStorage
+const saveEmptyMonths = (months: string[]) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem('emptyMonths', JSON.stringify(months));
+  } catch (error) {
+    console.error('Error saving empty months:', error);
+  }
+};
+
 // Carregar exclusões do localStorage
 const loadExcludedIds = (): string[] => {
   if (typeof window === 'undefined') return [];
@@ -97,22 +119,145 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
   excludedPredictedIds: loadExcludedIds(),
   showMonthPicker: false,
 
-  setCurrentMonth: (month: string) => {
+  setCurrentMonth: async (month: string) => {
     const state = get();
-    const monthData = state.monthsData[month];
-
     saveCurrentMonth(month); // Salvar no localStorage
 
+    const monthData = state.monthsData[month];
+
     if (monthData) {
-      set({
-        currentMonth: month,
-        transactions: monthData.transactions
+      // Regenerate predicted transactions for this month
+      const realTransactions = monthData.transactions.filter(t => !t.is_predicted);
+      const predictedTransactions = get().generatePredictedTransactions(12);
+      const excludedIds = get().excludedPredictedIds;
+
+      const transactions = [...realTransactions];
+
+      predictedTransactions.forEach((t) => {
+        if (excludedIds.includes(t.id)) return;
+
+        const tMonth = t.date.substring(0, 7);
+        if (tMonth !== month) return;
+
+        const hasRealTransaction = transactions.some(existing => {
+          if (existing.is_predicted) return false;
+          if (!existing.recurring_id || existing.recurring_id !== t.recurring_id) return false;
+          if (t.current_installment && t.total_installments) {
+            return existing.current_installment === t.current_installment &&
+                   existing.total_installments === t.total_installments;
+          }
+          return true;
+        });
+
+        const hasPredicted = transactions.some(existing => existing.id === t.id);
+
+        if (!hasRealTransaction && !hasPredicted) {
+          transactions.push(t);
+        }
       });
+
+      set(state => ({
+        currentMonth: month,
+        transactions,
+        monthsData: {
+          ...state.monthsData,
+          [month]: { transactions }
+        }
+      }));
     } else {
+      // Month data not loaded yet, load it from database
       set({
         currentMonth: month,
         transactions: []
       });
+
+      // Load the month's transactions from database
+      const supabaseClient = createClient();
+      const { data: { user } } = await supabaseClient.auth.getUser();
+
+      if (!user) return;
+
+      try {
+        const { data: transactionsData, error } = await supabaseClient
+          .from('transactions')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('month', month)
+          .order('date', { ascending: false });
+
+        if (error) {
+          console.error("Error loading month data:", error);
+          return;
+        }
+
+        const transactions: Transaction[] = [];
+
+        if (transactionsData && transactionsData.length > 0) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          transactionsData.forEach((t: any) => {
+            let numValue: number;
+            if (typeof t.value === 'string') {
+              const cleanValue = t.value.replace(/\./g, '').replace(',', '.');
+              numValue = parseFloat(cleanValue) || 0;
+            } else {
+              numValue = Number(t.value) || 0;
+            }
+
+            const transaction: Transaction = {
+              id: t.id,
+              description: t.description,
+              type: t.type as 'income' | 'expense',
+              category: t.category,
+              value: numValue,
+              date: t.date,
+              recurring_id: t.recurring_id,
+              is_predicted: false,
+              current_installment: t.current_installment,
+              total_installments: t.total_installments,
+            };
+
+            transactions.push(transaction);
+          });
+        }
+
+        // Add predicted transactions for this month
+        const predictedTransactions = get().generatePredictedTransactions(12);
+        const excludedIds = get().excludedPredictedIds;
+
+        predictedTransactions.forEach((t) => {
+          if (excludedIds.includes(t.id)) return;
+
+          const tMonth = t.date.substring(0, 7);
+          if (tMonth !== month) return;
+
+          const hasRealTransaction = transactions.some(existing => {
+            if (existing.is_predicted) return false;
+            if (!existing.recurring_id || existing.recurring_id !== t.recurring_id) return false;
+            if (t.current_installment && t.total_installments) {
+              return existing.current_installment === t.current_installment &&
+                     existing.total_installments === t.total_installments;
+            }
+            return true;
+          });
+
+          const hasPredicted = transactions.some(existing => existing.id === t.id);
+
+          if (!hasRealTransaction && !hasPredicted) {
+            transactions.push(t);
+          }
+        });
+
+        // Update monthsData and transactions
+        set(state => ({
+          monthsData: {
+            ...state.monthsData,
+            [month]: { transactions }
+          },
+          transactions: state.currentMonth === month ? transactions : state.transactions
+        }));
+      } catch (error) {
+        console.error("Error loading month data:", error);
+      }
     }
   },
 
@@ -125,7 +270,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     const state = get();
 
     if (state.monthsData[month]) {
-      get().setCurrentMonth(month);
+      await get().setCurrentMonth(month);
       return;
     }
 
@@ -177,21 +322,33 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       }
     }
 
-    set((state) => ({
-      monthsData: {
+    // If no transactions were created, save this as an empty month to localStorage
+    if (newTransactions.length === 0) {
+      const emptyMonths = loadEmptyMonths();
+      if (!emptyMonths.includes(month)) {
+        saveEmptyMonths([...emptyMonths, month]);
+      }
+    }
+
+    set((state) => {
+      const updatedMonthsData = {
         ...state.monthsData,
         [month]: { transactions: newTransactions },
-      },
-      currentMonth: month,
-      transactions: newTransactions,
-    }));
+      };
+      console.log('Month created. New monthsData keys:', Object.keys(updatedMonthsData));
+      return {
+        monthsData: updatedMonthsData,
+        currentMonth: month,
+        transactions: newTransactions,
+      };
+    });
   },
 
   toggleShowMonthPicker: (show: boolean) => {
     set({ showMonthPicker: show });
   },
 
-  loadFromSupabase: async () => {
+  loadFromSupabase: async (monthsToLoad: number = 1) => {
     if (typeof window === "undefined") return;
 
     try {
@@ -237,10 +394,31 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       const categoriesSet = new Set([...visibleDefaultCategories, ...userCustomCategories]);
       const categories = Array.from(categoriesSet).sort();
 
-      const { data: transactionsData, error } = await supabaseClient
+      // Optimize query based on how many months we need to load
+      let transactionsQuery = supabaseClient
         .from('transactions')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', user.id);
+
+      if (monthsToLoad === 1) {
+        // Load only current month for better performance
+        const currentMonth = getCurrentMonth();
+        transactionsQuery = transactionsQuery.eq('month', currentMonth);
+      } else if (monthsToLoad > 1) {
+        // Load specified number of months (current + previous months)
+        const monthsToQuery: string[] = [];
+        const now = new Date();
+
+        for (let i = 0; i < monthsToLoad; i++) {
+          const targetDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          const monthKey = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`;
+          monthsToQuery.push(monthKey);
+        }
+
+        transactionsQuery = transactionsQuery.in('month', monthsToQuery);
+      }
+
+      const { data: transactionsData, error } = await transactionsQuery
         .order('date', { ascending: false });
 
       if (error) {
@@ -341,6 +519,14 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
         monthsData[currentMonth] = { transactions: [] };
       }
 
+      // Restore empty months from localStorage
+      const emptyMonths = loadEmptyMonths();
+      emptyMonths.forEach(month => {
+        if (!monthsData[month]) {
+          monthsData[month] = { transactions: [] };
+        }
+      });
+
       const savedMonth = loadSavedMonth();
       const monthToUse = savedMonth && monthsData[savedMonth] ? savedMonth : currentMonth;
 
@@ -405,6 +591,12 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       };
 
       const updatedTransactions = [...state.transactions, newTransaction];
+
+      // Remove month from empty months list if it now has transactions
+      const emptyMonths = loadEmptyMonths();
+      if (emptyMonths.includes(month)) {
+        saveEmptyMonths(emptyMonths.filter(m => m !== month));
+      }
 
       set((state) => ({
         transactions: updatedTransactions,
@@ -540,7 +732,8 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     if (data) {
       console.log("Transaction created:", data);
       showSuccessToast("Transação criada com sucesso!");
-      await get().loadFromSupabase();
+      const monthsToLoad = await getMonthsToLoad();
+      await get().loadFromSupabase(monthsToLoad);
       // Restore the month after reload
       set({ currentMonth: currentMonthBeforeReload });
     }
@@ -726,7 +919,8 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
         }
       }
 
-      await get().loadFromSupabase();
+      const monthsToLoad = await getMonthsToLoad();
+      await get().loadFromSupabase(monthsToLoad);
       showSuccess("Dados importados com sucesso!");
     } catch (error) {
       console.error("Import error:", error);
@@ -775,7 +969,8 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       monthsData: {},
     });
 
-    await get().loadFromSupabase();
+    const monthsToLoad = await getMonthsToLoad();
+    await get().loadFromSupabase(monthsToLoad);
   },
 
   addRecurringTransaction: async (recurring: Omit<RecurringTransaction, "id" | "user_id" | "created_at">) => {
@@ -809,7 +1004,8 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     });
 
     // Reload data to generate predicted transactions
-    await get().loadFromSupabase();
+    const monthsToLoad = await getMonthsToLoad();
+    await get().loadFromSupabase(monthsToLoad);
 
     showSuccess("Transação recorrente criada!");
   },
@@ -835,7 +1031,8 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     }));
 
     // Reload data to update predicted transactions
-    await get().loadFromSupabase();
+    const monthsToLoad = await getMonthsToLoad();
+    await get().loadFromSupabase(monthsToLoad);
 
     showSuccess("Transação recorrente atualizada!");
   },
@@ -872,7 +1069,8 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     }));
 
     // Reload data to update UI
-    await get().loadFromSupabase();
+    const monthsToLoad = await getMonthsToLoad();
+    await get().loadFromSupabase(monthsToLoad);
 
     showSuccessToast("Transação recorrente deletada!");
   },
@@ -923,32 +1121,34 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     const today = new Date();
 
     state.recurringTransactions.forEach((recurring) => {
-      if (!recurring.is_active) {
-        return;
-      }
+      if (!recurring.is_active) return;
 
       const startDate = new Date(recurring.start_date);
       const endDate = recurring.end_date ? new Date(recurring.end_date) : null;
 
-      for (let i = 0; i <= monthsAhead; i++) {
-        const targetDate = new Date(today.getFullYear(), today.getMonth() + i, recurring.day_of_month);
+      // Calculate how many months back from today we need to go to reach start_date
+      const startYear = startDate.getFullYear();
+      const startMonthNum = startDate.getMonth();
+      const todayYear = today.getFullYear();
+      const todayMonth = today.getMonth();
+
+      const monthsFromStartToToday = (todayYear - startYear) * 12 + (todayMonth - startMonthNum);
+      const monthsToGenerate = monthsFromStartToToday + monthsAhead + 1; // +1 to include current month
+
+      for (let i = 0; i < monthsToGenerate; i++) {
+        const targetDate = new Date(startYear, startMonthNum + i, recurring.day_of_month);
+        const month = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`;
 
         // Skip if before start date
-        if (targetDate < startDate) {
-          continue;
-        }
+        if (targetDate < startDate) continue;
 
         // Skip if after end date
-        if (endDate && targetDate > endDate) {
-          continue;
-        }
+        if (endDate && targetDate > endDate) continue;
 
-        const month = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`;
         const dateStr = `${month}-${String(targetDate.getDate()).padStart(2, '0')}`;
 
         const currentInstallment = recurring.recurrence_type === 'installment'
-          ? (targetDate.getFullYear() - startDate.getFullYear()) * 12 +
-            (targetDate.getMonth() - startDate.getMonth()) + 1
+          ? i + 1
           : undefined;
 
         // Skip if installment exceeds total

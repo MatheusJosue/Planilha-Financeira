@@ -24,6 +24,7 @@ import { UserSettingsProvider, useUserSettings } from "@/components/UserSettings
 import { GradientCard } from "@/components/GradientCard";
 import { PageLayout } from "@/components/PageLayout";
 import { PeriodSeparationSettings } from "@/components/PeriodSeparationSettings";
+import { getMonthsToLoad } from "@/utils/dashboardConfigHelper";
 
 interface ImportedRecurringTransaction {
   description: string;
@@ -325,9 +326,10 @@ const SettingsPageContent = () => {
         }
       }
 
+      const monthsToLoad = await getMonthsToLoad();
       await (await import("@/store/financeStore")).useFinanceStore
         .getState()
-        .loadFromSupabase();
+        .loadFromSupabase(monthsToLoad);
       showSuccess("Dados importados com sucesso!");
     } catch (error) {
       console.error("Import error:", error);

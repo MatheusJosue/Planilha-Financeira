@@ -19,6 +19,7 @@ import RecurringTransactionForm from "@/components/RecurringTransactionForm";
 import { ConfirmRecurringModal } from "@/components/ConfirmRecurringModal";
 import { useFinanceStore } from "@/store/financeStore";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { getMonthsToLoad } from "@/utils/dashboardConfigHelper";
 
 type TabType = "transactions" | "income" | "predicted";
 
@@ -91,9 +92,10 @@ export default function TransactionsPage() {
   } = useFinanceStore();
 
   useEffect(() => {
-    loadRecurringTransactions().then(() => {
+    loadRecurringTransactions().then(async () => {
       // Regenerate predicted transactions after loading recurring ones
-      loadFromSupabase();
+      const monthsToLoad = await getMonthsToLoad();
+      loadFromSupabase(monthsToLoad);
     });
   }, [loadRecurringTransactions, loadFromSupabase]);
 

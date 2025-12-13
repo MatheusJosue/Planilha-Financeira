@@ -376,17 +376,23 @@ const MonthStats = ({ totalMonths }: MonthStatsProps) => {
 };
 
 export function MonthSelector() {
-  const { currentMonth, setCurrentMonth, createNewMonth, getAvailableMonths, monthsData, showMonthPicker, toggleShowMonthPicker } =
-    useFinanceStore();
+  const {
+    currentMonth,
+    setCurrentMonth,
+    createNewMonth,
+    monthsData,
+    showMonthPicker,
+    toggleShowMonthPicker,
+  } = useFinanceStore();
 
   const [showModal, setShowModal] = useState(false);
   const [newMonthValue, setNewMonthValue] = useState("");
   const [copyPrevious, setCopyPrevious] = useState(false);
 
-const availableMonths = useMemo(
-  () => getAvailableMonths(),
-  [getAvailableMonths, monthsData]
-);
+  const availableMonths = useMemo(() => {
+    const months = Object.keys(monthsData).sort().reverse();
+    return months;
+  }, [monthsData]);
 
   const isMonthDuplicate = useMemo(
     () => !!newMonthValue && availableMonths.includes(newMonthValue),
@@ -419,11 +425,11 @@ const availableMonths = useMemo(
     setCopyPrevious(false);
   }, []);
 
-  const handleCreateMonth = useCallback(() => {
+  const handleCreateMonth = useCallback(async () => {
     if (!newMonthValue || isMonthDuplicate) return;
 
-    createNewMonth(newMonthValue, copyPrevious);
-    setCurrentMonth(newMonthValue);
+    await createNewMonth(newMonthValue, copyPrevious);
+    await setCurrentMonth(newMonthValue);
     handleCloseModal();
   }, [
     newMonthValue,
