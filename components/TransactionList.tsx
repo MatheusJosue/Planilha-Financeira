@@ -290,6 +290,9 @@ export function TransactionList({
       if (!showPredicted && isPredicted) return false;
     }
 
+    // Quando showPredicted é false, excluir transações recorrentes (pontuais apenas)
+    if (showPredicted === false && t.recurring_id) return false;
+
     if (typeFilter && t.type !== typeFilter) return false;
 
     if (periodFilter) {

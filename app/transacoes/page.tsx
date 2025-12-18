@@ -14,6 +14,7 @@ import {
 import { Transaction, RecurringTransaction, TransactionType } from "@/types";
 import { TransactionForm } from "@/components/TransactionForm";
 import { TransactionList } from "@/components/TransactionList";
+import { PreviousMonthTransactionList } from "@/components/PreviousMonthTransactionList";
 import { MonthSelector } from "@/components/MonthSelector";
 import RecurringTransactionForm from "@/components/RecurringTransactionForm";
 import { ConfirmRecurringModal } from "@/components/ConfirmRecurringModal";
@@ -40,10 +41,17 @@ export default function TransactionsPage() {
   const [confirmingTransaction, setConfirmingTransaction] =
     useState<Transaction | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  // ID da transação original que está sendo duplicada (para esconder após confirmar)
+  const [duplicatingFromId, setDuplicatingFromId] = useState<string | null>(null);
 
   const [periodSeparationEnabled, setPeriodSeparationEnabled] = useState(false);
   const [period1End, setPeriod1End] = useState(15);
   const [period2Start, setPeriod2Start] = useState(16);
+
+  // IDs de transações do mês anterior que já foram trazidas ou ocultadas
+  const [hiddenPreviousMonthIds, setHiddenPreviousMonthIds] = useState<
+    string[]
+  >([]);
 
   useEffect(() => {
     loadUserSettings();
@@ -91,10 +99,79 @@ export default function TransactionsPage() {
     deleteRecurringTransaction,
   } = useFinanceStore();
 
+  // Carregar IDs ocultos do Supabase
+  useEffect(() => {
+    const loadHiddenIds = async () => {
+      try {
+        const supabaseClient = (
+          await import("@/lib/supabase-client")
+        ).createClient();
+        const {
+          data: { user },
+        } = await supabaseClient.auth.getUser();
+
+        if (!user) return;
+
+        const { data, error } = await supabaseClient
+          .from("hidden_previous_month_transactions")
+          .select("transaction_id")
+          .eq("user_id", user.id)
+          .eq("hidden_for_month", currentMonth);
+
+        if (error) {
+          console.error("Erro ao carregar transações ocultas:", error);
+          return;
+        }
+
+        if (data) {
+          setHiddenPreviousMonthIds(data.map((item) => item.transaction_id));
+        }
+      } catch (error) {
+        console.error("Erro ao carregar transações ocultas:", error);
+      }
+    };
+
+    loadHiddenIds();
+  }, [currentMonth]);
+
+  // Função para ocultar uma transação do mês anterior
+  const handleHidePreviousMonthTransaction = async (id: string) => {
+    try {
+      const supabaseClient = (
+        await import("@/lib/supabase-client")
+      ).createClient();
+      const {
+        data: { user },
+      } = await supabaseClient.auth.getUser();
+
+      if (!user) return;
+
+      const { error } = await supabaseClient
+        .from("hidden_previous_month_transactions")
+        .insert({
+          user_id: user.id,
+          transaction_id: id,
+          hidden_for_month: currentMonth,
+        });
+
+      if (error) {
+        console.error("Erro ao ocultar transação:", error);
+        return;
+      }
+
+      // Atualizar estado local
+      setHiddenPreviousMonthIds((prev) => [...prev, id]);
+    } catch (error) {
+      console.error("Erro ao ocultar transação:", error);
+    }
+  };
+
   useEffect(() => {
     loadRecurringTransactions().then(async () => {
       // Regenerate predicted transactions after loading recurring ones
-      const monthsToLoad = await getMonthsToLoad();
+      // Página de transações precisa de pelo menos 2 meses para a aba "Previstas"
+      const baseMonthsToLoad = await getMonthsToLoad();
+      const monthsToLoad = Math.max(baseMonthsToLoad, 2);
       loadFromSupabase(monthsToLoad);
     });
   }, [loadRecurringTransactions, loadFromSupabase]);
@@ -106,31 +183,33 @@ export default function TransactionsPage() {
   };
 
   const handleDuplicate = (transaction: Transaction) => {
-    const [year, month, day] = transaction.date.split("-").map(Number);
-    let nextMonth = month + 1;
-    let nextYear = year;
+    // Usar o mês atual selecionado (currentMonth) ao invés de incrementar a data original
+    // Isso garante que a transação vá para o mês que o usuário está visualizando
+    const [, , day] = transaction.date.split("-").map(Number);
+    const [targetYear, targetMonthNum] = currentMonth.split("-").map(Number);
 
-    if (nextMonth > 12) {
-      nextMonth = 1;
-      nextYear += 1;
-    }
-
-    const daysInNextMonth = new Date(nextYear, nextMonth, 0).getDate();
-    const validDay = Math.min(day, daysInNextMonth);
-    const nextMonthStr = `${nextYear}-${String(nextMonth).padStart(
+    const daysInTargetMonth = new Date(targetYear, targetMonthNum, 0).getDate();
+    const validDay = Math.min(day, daysInTargetMonth);
+    const targetDateStr = `${targetYear}-${String(targetMonthNum).padStart(
       2,
       "0"
     )}-${String(validDay).padStart(2, "0")}`;
 
     const duplicated: Transaction = {
       ...transaction,
-      date: nextMonthStr,
+      date: targetDateStr,
       id: "",
     };
 
-    setDuplicatingTransaction(duplicated);
+    // Guardar o ID original para esconder após confirmação
+    setDuplicatingFromId(transaction.id);
+    // Primeiro limpar e setar a transação, depois abrir o modal
     setEditingTransaction(null);
-    setShowForm(true);
+    setDuplicatingTransaction(duplicated);
+    // Usar setTimeout para garantir que o estado foi atualizado antes de abrir o modal
+    setTimeout(() => {
+      setShowForm(true);
+    }, 0);
   };
 
   const handleConfirmRecurring = (transaction: Transaction) => {
@@ -159,6 +238,15 @@ export default function TransactionsPage() {
     setDefaultTransactionType(undefined);
   };
 
+  // Callback chamado quando uma transação é adicionada via duplicação
+  const handleTransactionAdded = async () => {
+    // Se havia uma transação sendo duplicada, esconder a original da lista de previstas
+    if (duplicatingFromId) {
+      await handleHidePreviousMonthTransaction(duplicatingFromId);
+      setDuplicatingFromId(null);
+    }
+  };
+
   const handleCloseRecurringForm = () => {
     setShowRecurringForm(false);
     setEditingRecurring(undefined);
@@ -166,6 +254,27 @@ export default function TransactionsPage() {
 
   const monthData = monthsData[currentMonth];
   const currentTransactions = monthData?.transactions || [];
+
+  // Calcular mês anterior
+  const getPreviousMonth = (month: string) => {
+    const [year, monthNum] = month.split("-").map(Number);
+    let prevMonth = monthNum - 1;
+    let prevYear = year;
+    if (prevMonth < 1) {
+      prevMonth = 12;
+      prevYear -= 1;
+    }
+    return `${prevYear}-${String(prevMonth).padStart(2, "0")}`;
+  };
+
+  const previousMonth = getPreviousMonth(currentMonth);
+  const previousMonthData = monthsData[previousMonth];
+  const previousMonthTransactions = previousMonthData?.transactions || [];
+
+  // Transações do mês anterior (não recorrentes e não previstas) para a aba "Previstas"
+  const previousMonthNonRecurring = previousMonthTransactions.filter(
+    (t) => !t.is_predicted && !t.recurring_id
+  );
 
   const currentIncomes = currentTransactions
     .filter((t) => t.type === "income" && !t.is_predicted && !t.recurring_id)
@@ -183,19 +292,34 @@ export default function TransactionsPage() {
     .filter((t) => t.type === "expense" && !t.is_predicted && t.recurring_id)
     .reduce((sum, t) => sum + t.value, 0);
 
-  const predictedTransactions = currentTransactions.filter(
-    (t) => t.is_predicted
-  );
-
-  // Para os cards, separar previstas (não confirmadas) de todas as transações
-  const allPredictedTransactions = predictedTransactions;
-
-  const predictedIncome = allPredictedTransactions
-    .filter((t) => t.type === "income")
+  // Transações recorrentes previstas (ainda não confirmadas)
+  const predictedRecurringIncome = currentTransactions
+    .filter((t) => t.type === "income" && t.is_predicted && t.recurring_id)
     .reduce((sum, t) => sum + t.value, 0);
-  const predictedExpense = allPredictedTransactions
-    .filter((t) => t.type === "expense")
+
+  const predictedRecurringExpense = currentTransactions
+    .filter((t) => t.type === "expense" && t.is_predicted && t.recurring_id)
     .reduce((sum, t) => sum + t.value, 0);
+
+  // Total de recorrentes (confirmadas + previstas)
+  const totalRecurringIncome =
+    confirmedRecurringIncome + predictedRecurringIncome;
+  const totalRecurringExpense =
+    confirmedRecurringExpense + predictedRecurringExpense;
+
+  // Contagem de transações recorrentes
+  const confirmedRecurringIncomeCount = currentTransactions.filter(
+    (t) => t.type === "income" && !t.is_predicted && t.recurring_id
+  ).length;
+  const predictedRecurringIncomeCount = currentTransactions.filter(
+    (t) => t.type === "income" && t.is_predicted && t.recurring_id
+  ).length;
+  const confirmedRecurringExpenseCount = currentTransactions.filter(
+    (t) => t.type === "expense" && !t.is_predicted && t.recurring_id
+  ).length;
+  const predictedRecurringExpenseCount = currentTransactions.filter(
+    (t) => t.type === "expense" && t.is_predicted && t.recurring_id
+  ).length;
 
   // Incluir TODAS as transações confirmadas (pontuais + recorrentes)
   const incomeTransactions = currentTransactions.filter(
@@ -240,11 +364,22 @@ export default function TransactionsPage() {
     0
   );
 
-  const predictedIncomeTransactions = allPredictedTransactions.filter(
-    (t) => t.type === "income"
+  // Transações do mês anterior separadas por tipo (excluindo as ocultas)
+  const previousMonthIncomeTransactions = previousMonthNonRecurring.filter(
+    (t) => t.type === "income" && !hiddenPreviousMonthIds.includes(t.id)
   );
-  const predictedExpenseTransactions = allPredictedTransactions.filter(
-    (t) => t.type === "expense"
+  const previousMonthExpenseTransactions = previousMonthNonRecurring.filter(
+    (t) => t.type === "expense" && !hiddenPreviousMonthIds.includes(t.id)
+  );
+
+  // Recalcular totais do mês anterior considerando transações ocultas
+  const visiblePreviousMonthIncome = previousMonthIncomeTransactions.reduce(
+    (sum, t) => sum + t.value,
+    0
+  );
+  const visiblePreviousMonthExpense = previousMonthExpenseTransactions.reduce(
+    (sum, t) => sum + t.value,
+    0
   );
 
   return (
@@ -256,38 +391,9 @@ export default function TransactionsPage() {
             Gerencie transações, recorrentes e previsões
           </p>
         </div>
-        <Button
-          id="btn-add-transaction"
-          size="lg"
-          onClick={() => {
-            if (activeTab === "income") {
-              setDefaultTransactionType("income");
-              setShowForm(true);
-            } else {
-              setDefaultTransactionType("expense");
-              setShowForm(true);
-            }
-          }}
-          className="d-flex align-items-center justify-content-center gap-2 shadow w-100 w-md-auto"
-          style={{
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-            border: "none",
-            borderRadius: "12px",
-            padding: "12px 24px",
-            maxWidth: "100%",
-          }}
-        >
-          <FiPlus size={20} />
-          <span className="d-none d-sm-inline">
-            {activeTab === "income" ? "Nova Receita" : "Nova Despesa"}
-          </span>
-          <span className="d-inline d-sm-none">
-            {activeTab === "income" ? "Receita" : "Despesa"}
-          </span>
-        </Button>
-      </div>
 
-      <MonthSelector />
+        <MonthSelector />
+      </div>
 
       {/* Cards de Resumo */}
       <Row className="mb-4 g-3">
@@ -332,19 +438,17 @@ export default function TransactionsPage() {
                     <FiRepeat className="text-danger me-2" size={20} />
                     <h6 className="text-muted mb-0">Contas Recorrentes</h6>
                   </div>
-                  <h3 className="text-danger mb-0" id="total-recurring-expenses">
-                    {formatCurrency(confirmedRecurringExpense)}
+                  <h3
+                    className="text-danger mb-0"
+                    id="total-recurring-expenses"
+                  >
+                    {formatCurrency(totalRecurringExpense)}
                   </h3>
                   <small className="text-muted">
-                    {
-                      currentTransactions.filter(
-                        (t) =>
-                          t.type === "expense" &&
-                          !t.is_predicted &&
-                          t.recurring_id
-                      ).length
-                    }{" "}
-                    confirmadas
+                    {confirmedRecurringExpenseCount} confirmadas
+                    {predictedRecurringExpenseCount > 0 && (
+                      <> + {predictedRecurringExpenseCount} previstas</>
+                    )}
                   </small>
                 </Card.Body>
               </Card>
@@ -361,13 +465,9 @@ export default function TransactionsPage() {
                     <h6 className="text-muted mb-0">Total do Mês</h6>
                   </div>
                   <h3 className="text-warning mb-0" id="total-month-expenses">
-                    {formatCurrency(
-                      currentExpenses + confirmedRecurringExpense
-                    )}
+                    {formatCurrency(currentExpenses + totalRecurringExpense)}
                   </h3>
-                  <small className="text-muted">
-                    Pontuais + Fixas confirmadas
-                  </small>
+                  <small className="text-muted">Pontuais + Recorrentes</small>
                 </Card.Body>
               </Card>
             </Col>
@@ -388,11 +488,9 @@ export default function TransactionsPage() {
                     <h6 className="text-muted mb-0">Total de Receitas</h6>
                   </div>
                   <h3 className="text-success mb-0" id="total-income">
-                    {formatCurrency(currentIncomes + confirmedRecurringIncome)}
+                    {formatCurrency(currentIncomes + totalRecurringIncome)}
                   </h3>
-                  <small className="text-muted">
-                    Pontuais + Fixas confirmadas
-                  </small>
+                  <small className="text-muted">Pontuais + Recorrentes</small>
                 </Card.Body>
               </Card>
             </Col>
@@ -436,18 +534,13 @@ export default function TransactionsPage() {
                     <h6 className="text-muted mb-0">Receitas Fixas</h6>
                   </div>
                   <h3 className="text-primary mb-0" id="total-recurring-income">
-                    {formatCurrency(confirmedRecurringIncome)}
+                    {formatCurrency(totalRecurringIncome)}
                   </h3>
                   <small className="text-muted">
-                    {
-                      currentTransactions.filter(
-                        (t) =>
-                          t.type === "income" &&
-                          !t.is_predicted &&
-                          t.recurring_id
-                      ).length
-                    }{" "}
-                    confirmadas
+                    {confirmedRecurringIncomeCount} confirmadas
+                    {predictedRecurringIncomeCount > 0 && (
+                      <> + {predictedRecurringIncomeCount} previstas</>
+                    )}
                   </small>
                 </Card.Body>
               </Card>
@@ -466,17 +559,13 @@ export default function TransactionsPage() {
                 <Card.Body>
                   <div className="d-flex align-items-center justify-content-center mb-2">
                     <FiCalendar className="text-success me-2" size={20} />
-                    <h6 className="text-muted mb-0">Receitas Previstas</h6>
+                    <h6 className="text-muted mb-0">Receitas (Mês Anterior)</h6>
                   </div>
                   <h3 className="text-success mb-0" id="total-predicted-income">
-                    {formatCurrency(predictedIncome)}
+                    {formatCurrency(visiblePreviousMonthIncome)}
                   </h3>
                   <small className="text-muted">
-                    {
-                      predictedTransactions.filter((t) => t.type === "income")
-                        .length
-                    }{" "}
-                    previsões
+                    {previousMonthIncomeTransactions.length} transações
                   </small>
                 </Card.Body>
               </Card>
@@ -490,17 +579,16 @@ export default function TransactionsPage() {
                 <Card.Body>
                   <div className="d-flex align-items-center justify-content-center mb-2">
                     <FiCalendar className="text-danger me-2" size={20} />
-                    <h6 className="text-muted mb-0">Despesas Previstas</h6>
+                    <h6 className="text-muted mb-0">Despesas (Mês Anterior)</h6>
                   </div>
-                  <h3 className="text-danger mb-0" id="total-predicted-expenses">
-                    {formatCurrency(predictedExpense)}
+                  <h3
+                    className="text-danger mb-0"
+                    id="total-predicted-expenses"
+                  >
+                    {formatCurrency(visiblePreviousMonthExpense)}
                   </h3>
                   <small className="text-muted">
-                    {
-                      predictedTransactions.filter((t) => t.type === "expense")
-                        .length
-                    }{" "}
-                    previsões
+                    {previousMonthExpenseTransactions.length} transações
                   </small>
                 </Card.Body>
               </Card>
@@ -514,12 +602,27 @@ export default function TransactionsPage() {
                 <Card.Body>
                   <div className="d-flex align-items-center justify-content-center mb-2">
                     <FiDollarSign className="text-info me-2" size={20} />
-                    <h6 className="text-muted mb-0">Total de Previsões</h6>
+                    <h6 className="text-muted mb-0">Saldo (Mês Anterior)</h6>
                   </div>
-                  <h3 className="text-info mb-0" id="total-predicted-count">
-                    {predictedTransactions.length}
+                  <h3
+                    className={`mb-0 ${
+                      visiblePreviousMonthIncome -
+                        visiblePreviousMonthExpense >=
+                      0
+                        ? "text-success"
+                        : "text-danger"
+                    }`}
+                    id="total-predicted-count"
+                  >
+                    {formatCurrency(
+                      visiblePreviousMonthIncome - visiblePreviousMonthExpense
+                    )}
                   </h3>
-                  <small className="text-muted">Transações</small>
+                  <small className="text-muted">
+                    {previousMonthIncomeTransactions.length +
+                      previousMonthExpenseTransactions.length}{" "}
+                    transações restantes
+                  </small>
                 </Card.Body>
               </Card>
             </Col>
@@ -528,7 +631,11 @@ export default function TransactionsPage() {
       </Row>
 
       {/* Tabs */}
-      <Card className="shadow-sm mb-4" style={{ borderRadius: "12px" }} id="card-tabs">
+      <Card
+        className="shadow-sm mb-4"
+        style={{ borderRadius: "12px" }}
+        id="card-tabs"
+      >
         <Card.Header
           style={{
             background: "transparent",
@@ -840,292 +947,44 @@ export default function TransactionsPage() {
 
           {activeTab === "predicted" && (
             <>
-              {allPredictedTransactions.length === 0 ? (
+              {previousMonthNonRecurring.length === 0 ? (
                 <div className="text-center py-5">
                   <FiCalendar size={48} className="text-muted mb-3" />
                   <p className="text-muted">
-                    Nenhuma transação prevista para este mês
+                    Nenhuma transação pontual no mês anterior ({previousMonth})
                   </p>
+                  <small className="text-muted">
+                    As transações pontuais do mês anterior aparecem aqui para
+                    você decidir quais trazer para o mês atual.
+                  </small>
                 </div>
-              ) : periodSeparationEnabled ? (
-                <>
-                  {/* 1º Período - Previsões */}
-                  <Card
-                    className="mb-3"
-                    style={{
-                      borderRadius: "12px",
-                      border: "2px solid rgba(102, 126, 234, 0.3)",
-                      background: "rgba(102, 126, 234, 0.02)",
-                    }}
-                  >
-                    <Card.Header
-                      style={{
-                        background:
-                          "linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.1) 100%)",
-                        borderBottom: "2px solid rgba(102, 126, 234, 0.2)",
-                        padding: "1rem",
-                      }}
-                    >
-                      <h5 className="mb-0 fw-bold" style={{ color: "#667eea" }}>
-                        📅 1º Período (dias 1 a {period1End})
-                      </h5>
-                    </Card.Header>
-                    <Card.Body>
-                      <Row className="g-3 mb-3">
-                        <Col xs={12} md={6}>
-                          <Card
-                            className="text-center h-100"
-                            style={{
-                              borderRadius: "10px",
-                              border: "2px solid rgba(25, 135, 84, 0.3)",
-                              background: "rgba(25, 135, 84, 0.05)",
-                            }}
-                          >
-                            <Card.Body className="py-3">
-                              <div className="d-flex align-items-center justify-content-center gap-2 mb-2">
-                                <FiTrendingUp
-                                  className="text-success"
-                                  size={20}
-                                />
-                                <h6 className="text-success mb-0 fw-semibold">
-                                  Receitas Previstas
-                                </h6>
-                              </div>
-                              <h4 className="text-success mb-1">
-                                {formatCurrency(
-                                  allPredictedTransactions
-                                    .filter(
-                                      (t) =>
-                                        t.type === "income" &&
-                                        parseInt(t.date.split("-")[2]) <=
-                                          period1End
-                                    )
-                                    .reduce((sum, t) => sum + t.value, 0)
-                                )}
-                              </h4>
-                              <small className="text-muted">
-                                {
-                                  allPredictedTransactions.filter(
-                                    (t) =>
-                                      t.type === "income" &&
-                                      parseInt(t.date.split("-")[2]) <=
-                                        period1End
-                                  ).length
-                                }{" "}
-                                transações
-                              </small>
-                            </Card.Body>
-                          </Card>
-                        </Col>
-                        <Col xs={12} md={6}>
-                          <Card
-                            className="text-center h-100"
-                            style={{
-                              borderRadius: "10px",
-                              border: "2px solid rgba(220, 53, 69, 0.3)",
-                              background: "rgba(220, 53, 69, 0.05)",
-                            }}
-                          >
-                            <Card.Body className="py-3">
-                              <div className="d-flex align-items-center justify-content-center gap-2 mb-2">
-                                <FiDollarSign
-                                  className="text-danger"
-                                  size={20}
-                                />
-                                <h6 className="text-danger mb-0 fw-semibold">
-                                  Despesas Previstas
-                                </h6>
-                              </div>
-                              <h4 className="text-danger mb-1">
-                                {formatCurrency(
-                                  allPredictedTransactions
-                                    .filter(
-                                      (t) =>
-                                        t.type === "expense" &&
-                                        parseInt(t.date.split("-")[2]) <=
-                                          period1End
-                                    )
-                                    .reduce((sum, t) => sum + t.value, 0)
-                                )}
-                              </h4>
-                              <small className="text-muted">
-                                {
-                                  allPredictedTransactions.filter(
-                                    (t) =>
-                                      t.type === "expense" &&
-                                      parseInt(t.date.split("-")[2]) <=
-                                        period1End
-                                  ).length
-                                }{" "}
-                                transações
-                              </small>
-                            </Card.Body>
-                          </Card>
-                        </Col>
-                      </Row>
-
-                      {/* Lista de Transações do 1º Período */}
-                      <div className="mt-3">
-                        {allPredictedTransactions.filter(
-                          (t) => parseInt(t.date.split("-")[2]) <= period1End
-                        ).length > 0 ? (
-                          <TransactionList
-                            onEdit={handleEdit}
-                            onDuplicate={handleDuplicate}
-                            onConfirmRecurring={handleConfirmRecurring}
-                            showPredicted={true}
-                            periodFilter={{ startDay: 1, endDay: period1End }}
-                          />
-                        ) : (
-                          <div className="text-center py-3 text-muted">
-                            Nenhuma transação prevista neste período
-                          </div>
-                        )}
-                      </div>
-                    </Card.Body>
-                  </Card>
-
-                  {/* 2º Período - Previsões */}
-                  <Card
-                    style={{
-                      borderRadius: "12px",
-                      border: "2px solid rgba(102, 126, 234, 0.3)",
-                      background: "rgba(102, 126, 234, 0.02)",
-                    }}
-                  >
-                    <Card.Header
-                      style={{
-                        background:
-                          "linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.1) 100%)",
-                        borderBottom: "2px solid rgba(102, 126, 234, 0.2)",
-                        padding: "1rem",
-                      }}
-                    >
-                      <h5 className="mb-0 fw-bold" style={{ color: "#667eea" }}>
-                        📅 2º Período (dia {period2Start} em diante)
-                      </h5>
-                    </Card.Header>
-                    <Card.Body>
-                      <Row className="g-3 mb-3">
-                        <Col xs={12} md={6}>
-                          <Card
-                            className="text-center h-100"
-                            style={{
-                              borderRadius: "10px",
-                              border: "2px solid rgba(25, 135, 84, 0.3)",
-                              background: "rgba(25, 135, 84, 0.05)",
-                            }}
-                          >
-                            <Card.Body className="py-3">
-                              <div className="d-flex align-items-center justify-content-center gap-2 mb-2">
-                                <FiTrendingUp
-                                  className="text-success"
-                                  size={20}
-                                />
-                                <h6 className="text-success mb-0 fw-semibold">
-                                  Receitas Previstas
-                                </h6>
-                              </div>
-                              <h4 className="text-success mb-1">
-                                {formatCurrency(
-                                  allPredictedTransactions
-                                    .filter(
-                                      (t) =>
-                                        t.type === "income" &&
-                                        parseInt(t.date.split("-")[2]) >=
-                                          period2Start
-                                    )
-                                    .reduce((sum, t) => sum + t.value, 0)
-                                )}
-                              </h4>
-                              <small className="text-muted">
-                                {
-                                  allPredictedTransactions.filter(
-                                    (t) =>
-                                      t.type === "income" &&
-                                      parseInt(t.date.split("-")[2]) >=
-                                        period2Start
-                                  ).length
-                                }{" "}
-                                transações
-                              </small>
-                            </Card.Body>
-                          </Card>
-                        </Col>
-                        <Col xs={12} md={6}>
-                          <Card
-                            className="text-center h-100"
-                            style={{
-                              borderRadius: "10px",
-                              border: "2px solid rgba(220, 53, 69, 0.3)",
-                              background: "rgba(220, 53, 69, 0.05)",
-                            }}
-                          >
-                            <Card.Body className="py-3">
-                              <div className="d-flex align-items-center justify-content-center gap-2 mb-2">
-                                <FiDollarSign
-                                  className="text-danger"
-                                  size={20}
-                                />
-                                <h6 className="text-danger mb-0 fw-semibold">
-                                  Despesas Previstas
-                                </h6>
-                              </div>
-                              <h4 className="text-danger mb-1">
-                                {formatCurrency(
-                                  allPredictedTransactions
-                                    .filter(
-                                      (t) =>
-                                        t.type === "expense" &&
-                                        parseInt(t.date.split("-")[2]) >=
-                                          period2Start
-                                    )
-                                    .reduce((sum, t) => sum + t.value, 0)
-                                )}
-                              </h4>
-                              <small className="text-muted">
-                                {
-                                  allPredictedTransactions.filter(
-                                    (t) =>
-                                      t.type === "expense" &&
-                                      parseInt(t.date.split("-")[2]) >=
-                                        period2Start
-                                  ).length
-                                }{" "}
-                                transações
-                              </small>
-                            </Card.Body>
-                          </Card>
-                        </Col>
-                      </Row>
-
-                      {/* Lista de Transações do 2º Período */}
-                      <div className="mt-3">
-                        {allPredictedTransactions.filter(
-                          (t) => parseInt(t.date.split("-")[2]) >= period2Start
-                        ).length > 0 ? (
-                          <TransactionList
-                            onEdit={handleEdit}
-                            onDuplicate={handleDuplicate}
-                            onConfirmRecurring={handleConfirmRecurring}
-                            showPredicted={true}
-                            periodFilter={{
-                              startDay: period2Start,
-                              endDay: 31,
-                            }}
-                          />
-                        ) : (
-                          <div className="text-center py-3 text-muted">
-                            Nenhuma transação prevista neste período
-                          </div>
-                        )}
-                      </div>
-                    </Card.Body>
-                  </Card>
-                </>
               ) : (
                 <>
-                  {/* Visão Unificada - Sem separação de períodos */}
+                  {/* Informativo */}
+                  <div
+                    className="mb-4 p-3"
+                    role="alert"
+                    style={{
+                      background: "rgba(102, 126, 234, 0.1)",
+                      border: "1px solid rgba(102, 126, 234, 0.3)",
+                      borderRadius: "12px",
+                      color: "var(--foreground)",
+                    }}
+                  >
+                    <div className="d-flex align-items-center gap-2">
+                      <FiCalendar size={20} />
+                      <div>
+                        <strong>
+                          Transações do Mês Anterior ({previousMonth}):
+                        </strong>{" "}
+                        Estas são as transações pontuais do mês anterior. Use o
+                        botão <strong>&quot;Duplicar&quot;</strong> para trazer
+                        uma transação para o mês atual.
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Visão Unificada - Transações do mês anterior */}
                   <Row className="g-3 mb-4">
                     <Col xs={12} md={4}>
                       <Card
@@ -1140,11 +999,11 @@ export default function TransactionsPage() {
                           <div className="d-flex align-items-center justify-content-center gap-2 mb-3">
                             <FiTrendingUp className="text-success" size={24} />
                             <h5 className="text-success mb-0 fw-bold">
-                              Receitas Previstas
+                              Receitas
                             </h5>
                           </div>
                           <h2 className="text-success mb-2">
-                            {formatCurrency(predictedIncome)}
+                            {formatCurrency(visiblePreviousMonthIncome)}
                           </h2>
                           <Badge
                             bg="success"
@@ -1154,7 +1013,7 @@ export default function TransactionsPage() {
                               fontSize: "0.9rem",
                             }}
                           >
-                            {predictedIncomeTransactions.length} transações
+                            {previousMonthIncomeTransactions.length} transações
                           </Badge>
                         </Card.Body>
                       </Card>
@@ -1172,11 +1031,11 @@ export default function TransactionsPage() {
                           <div className="d-flex align-items-center justify-content-center gap-2 mb-3">
                             <FiDollarSign className="text-danger" size={24} />
                             <h5 className="text-danger mb-0 fw-bold">
-                              Despesas Previstas
+                              Despesas
                             </h5>
                           </div>
                           <h2 className="text-danger mb-2">
-                            {formatCurrency(predictedExpense)}
+                            {formatCurrency(visiblePreviousMonthExpense)}
                           </h2>
                           <Badge
                             bg="danger"
@@ -1186,7 +1045,7 @@ export default function TransactionsPage() {
                               fontSize: "0.9rem",
                             }}
                           >
-                            {predictedExpenseTransactions.length} transações
+                            {previousMonthExpenseTransactions.length} transações
                           </Badge>
                         </Card.Body>
                       </Card>
@@ -1203,22 +1062,27 @@ export default function TransactionsPage() {
                         <Card.Body className="py-4">
                           <div className="d-flex align-items-center justify-content-center gap-2 mb-3">
                             <FiCalendar className="text-primary" size={24} />
-                            <h5 className="text-primary mb-0 fw-bold">
-                              Saldo Previsto
-                            </h5>
+                            <h5 className="text-primary mb-0 fw-bold">Saldo</h5>
                           </div>
                           <h2
                             className={`mb-2 ${
-                              predictedIncome - predictedExpense >= 0
+                              visiblePreviousMonthIncome -
+                                visiblePreviousMonthExpense >=
+                              0
                                 ? "text-success"
                                 : "text-danger"
                             }`}
                           >
-                            {formatCurrency(predictedIncome - predictedExpense)}
+                            {formatCurrency(
+                              visiblePreviousMonthIncome -
+                                visiblePreviousMonthExpense
+                            )}
                           </h2>
                           <Badge
                             bg={
-                              predictedIncome - predictedExpense >= 0
+                              visiblePreviousMonthIncome -
+                                visiblePreviousMonthExpense >=
+                              0
                                 ? "success"
                                 : "danger"
                             }
@@ -1228,7 +1092,9 @@ export default function TransactionsPage() {
                               fontSize: "0.9rem",
                             }}
                           >
-                            {predictedIncome - predictedExpense >= 0
+                            {visiblePreviousMonthIncome -
+                              visiblePreviousMonthExpense >=
+                            0
                               ? "Positivo"
                               : "Negativo"}
                           </Badge>
@@ -1237,12 +1103,12 @@ export default function TransactionsPage() {
                     </Col>
                   </Row>
 
-                  {/* Seção de Receitas Previstas */}
-                  {predictedIncomeTransactions.length > 0 && (
+                  {/* Seção de Receitas do Mês Anterior */}
+                  {previousMonthIncomeTransactions.length > 0 && (
                     <div className="mb-4">
                       <h5 className="mb-3 d-flex align-items-center gap-2">
                         <FiTrendingUp className="text-success" />
-                        Receitas Previstas
+                        Receitas do Mês Anterior
                         <Badge
                           bg="success"
                           style={{
@@ -1251,25 +1117,24 @@ export default function TransactionsPage() {
                             fontSize: "0.85rem",
                           }}
                         >
-                          {predictedIncomeTransactions.length}
+                          {previousMonthIncomeTransactions.length}
                         </Badge>
                       </h5>
-                      <TransactionList
-                        onEdit={handleEdit}
+                      <PreviousMonthTransactionList
+                        transactions={previousMonthIncomeTransactions}
                         onDuplicate={handleDuplicate}
-                        onConfirmRecurring={handleConfirmRecurring}
-                        showPredicted={true}
-                        typeFilter="income"
+                        hiddenIds={hiddenPreviousMonthIds}
+                        onHide={handleHidePreviousMonthTransaction}
                       />
                     </div>
                   )}
 
-                  {/* Seção de Despesas Previstas */}
-                  {predictedExpenseTransactions.length > 0 && (
+                  {/* Seção de Despesas do Mês Anterior */}
+                  {previousMonthExpenseTransactions.length > 0 && (
                     <div>
                       <h5 className="mb-3 d-flex align-items-center gap-2">
                         <FiDollarSign className="text-danger" />
-                        Despesas Previstas
+                        Despesas do Mês Anterior
                         <Badge
                           bg="danger"
                           style={{
@@ -1278,19 +1143,17 @@ export default function TransactionsPage() {
                             fontSize: "0.85rem",
                           }}
                         >
-                          {predictedExpenseTransactions.length}
+                          {previousMonthExpenseTransactions.length}
                         </Badge>
                       </h5>
-                      <TransactionList
-                        onEdit={handleEdit}
+                      <PreviousMonthTransactionList
+                        transactions={previousMonthExpenseTransactions}
                         onDuplicate={handleDuplicate}
-                        onConfirmRecurring={handleConfirmRecurring}
-                        showPredicted={true}
-                        typeFilter="expense"
+                        hiddenIds={hiddenPreviousMonthIds}
+                        onHide={handleHidePreviousMonthTransaction}
                       />
                     </div>
                   )}
-
                 </>
               )}
             </>
@@ -1330,7 +1193,12 @@ export default function TransactionsPage() {
                 overflow: "hidden",
               }}
             >
-              <Table hover responsive className="align-middle mb-0" id="table-configured-recurring">
+              <Table
+                hover
+                responsive
+                className="align-middle mb-0"
+                id="table-configured-recurring"
+              >
                 <thead
                   style={{
                     background:
@@ -1339,35 +1207,88 @@ export default function TransactionsPage() {
                   }}
                 >
                   <tr>
-                    <th className="text-center" style={{ padding: "1rem", fontWeight: "600", fontSize: "0.9rem" }}>
+                    <th
+                      className="text-center"
+                      style={{
+                        padding: "1rem",
+                        fontWeight: "600",
+                        fontSize: "0.9rem",
+                      }}
+                    >
                       Ações
                     </th>
-                    <th className="text-start" style={{ padding: "1rem", fontWeight: "600", fontSize: "0.9rem" }}>
+                    <th
+                      className="text-start"
+                      style={{
+                        padding: "1rem",
+                        fontWeight: "600",
+                        fontSize: "0.9rem",
+                      }}
+                    >
                       Descrição
                     </th>
-                    <th style={{ padding: "1rem", fontWeight: "600", fontSize: "0.9rem" }}>
+                    <th
+                      style={{
+                        padding: "1rem",
+                        fontWeight: "600",
+                        fontSize: "0.9rem",
+                      }}
+                    >
                       Tipo
                     </th>
-                    <th style={{ padding: "1rem", fontWeight: "600", fontSize: "0.9rem" }}>
+                    <th
+                      style={{
+                        padding: "1rem",
+                        fontWeight: "600",
+                        fontSize: "0.9rem",
+                      }}
+                    >
                       Categoria
                     </th>
-                    <th style={{ padding: "1rem", fontWeight: "600", fontSize: "0.9rem" }}>
+                    <th
+                      style={{
+                        padding: "1rem",
+                        fontWeight: "600",
+                        fontSize: "0.9rem",
+                      }}
+                    >
                       Valor
                     </th>
-                    <th style={{ padding: "1rem", fontWeight: "600", fontSize: "0.9rem" }}>
+                    <th
+                      style={{
+                        padding: "1rem",
+                        fontWeight: "600",
+                        fontSize: "0.9rem",
+                      }}
+                    >
                       Recorrência
                     </th>
-                    <th style={{ padding: "1rem", fontWeight: "600", fontSize: "0.9rem" }}>
+                    <th
+                      style={{
+                        padding: "1rem",
+                        fontWeight: "600",
+                        fontSize: "0.9rem",
+                      }}
+                    >
                       Dia Vencimento
                     </th>
-                    <th style={{ padding: "1rem", fontWeight: "600", fontSize: "0.9rem" }}>
+                    <th
+                      style={{
+                        padding: "1rem",
+                        fontWeight: "600",
+                        fontSize: "0.9rem",
+                      }}
+                    >
                       Início
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   {recurringTransactions.map((transaction) => (
-                    <tr key={transaction.id} id={`configured-recurring-row-${transaction.id}`}>
+                    <tr
+                      key={transaction.id}
+                      id={`configured-recurring-row-${transaction.id}`}
+                    >
                       <td className="text-center" style={{ padding: "1rem" }}>
                         <Button
                           id={`btn-edit-configured-${transaction.id}`}
@@ -1385,7 +1306,9 @@ export default function TransactionsPage() {
                           variant="outline-danger"
                           size="sm"
                           className="mb-1"
-                          onClick={() => deleteRecurringTransaction(transaction.id)}
+                          onClick={() =>
+                            deleteRecurringTransaction(transaction.id)
+                          }
                           style={{ borderRadius: "8px", padding: "6px 12px" }}
                           title="Excluir"
                         >
@@ -1399,26 +1322,45 @@ export default function TransactionsPage() {
                       </td>
                       <td style={{ padding: "1rem" }}>
                         <Badge
-                          bg={transaction.type === "income" ? "success" : "danger"}
-                          style={{ padding: "6px 12px", borderRadius: "8px", fontWeight: "500", fontSize: "0.85rem" }}
+                          bg={
+                            transaction.type === "income" ? "success" : "danger"
+                          }
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: "8px",
+                            fontWeight: "500",
+                            fontSize: "0.85rem",
+                          }}
                         >
-                          {transaction.type === "income" ? "Receita" : "Despesa"}
+                          {transaction.type === "income"
+                            ? "Receita"
+                            : "Despesa"}
                         </Badge>
                       </td>
                       <td style={{ padding: "1rem" }}>
                         <Badge
                           bg="secondary"
-                          style={{ padding: "6px 12px", borderRadius: "8px", fontWeight: "500", fontSize: "0.85rem" }}
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: "8px",
+                            fontWeight: "500",
+                            fontSize: "0.85rem",
+                          }}
                         >
                           {transaction.category}
                         </Badge>
                       </td>
                       <td className="text-end" style={{ padding: "1rem" }}>
                         <span
-                          className={transaction.type === "income" ? "text-success fw-bold" : "text-danger fw-bold"}
+                          className={
+                            transaction.type === "income"
+                              ? "text-success fw-bold"
+                              : "text-danger fw-bold"
+                          }
                           style={{ fontSize: "1rem" }}
                         >
-                          {transaction.recurrence_type === "variable_by_income" ? (
+                          {transaction.recurrence_type ===
+                          "variable_by_income" ? (
                             `${transaction.value}%`
                           ) : (
                             <>
@@ -1431,7 +1373,12 @@ export default function TransactionsPage() {
                       <td style={{ padding: "1rem" }}>
                         <Badge
                           bg="primary"
-                          style={{ padding: "6px 12px", borderRadius: "8px", fontWeight: "500", fontSize: "0.85rem" }}
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: "8px",
+                            fontWeight: "500",
+                            fontSize: "0.85rem",
+                          }}
                         >
                           {transaction.recurrence_type === "fixed"
                             ? "Fixo"
@@ -1446,7 +1393,9 @@ export default function TransactionsPage() {
                         Dia {transaction.day_of_month || "N/A"}
                       </td>
                       <td style={{ padding: "1rem" }}>
-                        {new Date(transaction.start_date).toLocaleDateString("pt-BR")}
+                        {new Date(transaction.start_date).toLocaleDateString(
+                          "pt-BR"
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -1462,12 +1411,28 @@ export default function TransactionsPage() {
                 border: "1px dashed var(--border-color)",
               }}
             >
-              <FiRepeat size={48} style={{ color: "var(--muted-foreground)", opacity: 0.5 }} />
-              <p style={{ color: "var(--muted-foreground)", margin: "1rem 0 0 0", fontSize: "1.1rem" }}>
+              <FiRepeat
+                size={48}
+                style={{ color: "var(--muted-foreground)", opacity: 0.5 }}
+              />
+              <p
+                style={{
+                  color: "var(--muted-foreground)",
+                  margin: "1rem 0 0 0",
+                  fontSize: "1.1rem",
+                }}
+              >
                 Nenhuma transação recorrente configurada
               </p>
-              <p style={{ color: "var(--muted-foreground)", margin: "0.5rem 0 0 0", fontSize: "0.9rem" }}>
-                Clique no botão &quot;➕ Criar Conta&quot; acima para adicionar uma nova transação recorrente
+              <p
+                style={{
+                  color: "var(--muted-foreground)",
+                  margin: "0.5rem 0 0 0",
+                  fontSize: "0.9rem",
+                }}
+              >
+                Clique no botão &quot;➕ Criar Conta&quot; acima para adicionar
+                uma nova transação recorrente
               </p>
             </div>
           )}
@@ -1479,6 +1444,7 @@ export default function TransactionsPage() {
         onHide={handleCloseForm}
         transaction={editingTransaction || duplicatingTransaction}
         defaultType={defaultTransactionType}
+        onTransactionAdded={handleTransactionAdded}
       />
 
       <RecurringTransactionForm

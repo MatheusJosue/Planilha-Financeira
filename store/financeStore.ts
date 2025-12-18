@@ -113,7 +113,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
   categoryLimits: {},
   hiddenDefaultCategories: [],
   isLoaded: false,
-  currentMonth: getCurrentMonth(),
+  currentMonth: loadSavedMonth() || getCurrentMonth(),
   monthsData: {},
   recurringTransactions: [],
   excludedPredictedIds: loadExcludedIds(),
@@ -400,26 +400,33 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
         .select('*')
         .eq('user_id', user.id);
 
+      // Usar o mês selecionado pelo usuário (do store) ao invés da data atual do sistema
+      const selectedMonth = get().currentMonth || getCurrentMonth();
+      const [selectedYear, selectedMonthNum] = selectedMonth.split('-').map(Number);
+
       if (monthsToLoad === 1) {
         // Load only current month for better performance
-        const currentMonth = getCurrentMonth();
-        transactionsQuery = transactionsQuery.eq('month', currentMonth);
+        transactionsQuery = transactionsQuery.eq('month', selectedMonth);
+        console.log("[loadFromSupabase] Mês sendo consultado:", selectedMonth);
       } else if (monthsToLoad > 1) {
-        // Load specified number of months (current + previous months)
+        // Load specified number of months (selected month + previous months)
         const monthsToQuery: string[] = [];
-        const now = new Date();
 
         for (let i = 0; i < monthsToLoad; i++) {
-          const targetDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          const targetDate = new Date(selectedYear, selectedMonthNum - 1 - i, 1);
           const monthKey = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`;
           monthsToQuery.push(monthKey);
         }
 
         transactionsQuery = transactionsQuery.in('month', monthsToQuery);
+        console.log("[loadFromSupabase] Meses sendo consultados:", monthsToQuery);
       }
 
       const { data: transactionsData, error } = await transactionsQuery
         .order('date', { ascending: false });
+
+      console.log("[loadFromSupabase] Transações carregadas:", transactionsData?.length || 0);
+      console.log("[loadFromSupabase] Transações:", transactionsData);
 
       if (error) {
         console.error("Error loading from Supabase:", error);
@@ -549,7 +556,6 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
   },
 
   addTransaction: async (transaction) => {
-    const state = get();
     const month = transaction.date.substring(0, 7);
 
     const supabaseClient = createClient();
@@ -580,6 +586,9 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       return;
     }
 
+    console.log("[addTransaction] Dados salvos no Supabase:", data);
+    console.log("[addTransaction] Mês da transação:", month);
+
     if (data) {
       const newTransaction: Transaction = {
         id: data.id,
@@ -588,9 +597,8 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
         category: data.category,
         value: Number(data.value),
         date: data.date,
+        is_predicted: false,
       };
-
-      const updatedTransactions = [...state.transactions, newTransaction];
 
       // Remove month from empty months list if it now has transactions
       const emptyMonths = loadEmptyMonths();
@@ -598,13 +606,30 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
         saveEmptyMonths(emptyMonths.filter(m => m !== month));
       }
 
-      set((state) => ({
-        transactions: updatedTransactions,
-        monthsData: {
-          ...state.monthsData,
-          [state.currentMonth]: { transactions: updatedTransactions },
-        },
-      }));
+      // Update the correct month's data based on transaction date
+      set((state) => {
+        const targetMonthData = state.monthsData[month] || { transactions: [] };
+        // Filter out any existing transaction with same ID to avoid duplicates, then add new
+        const existingTransactions = targetMonthData.transactions.filter(t => t.id !== newTransaction.id);
+        const updatedTargetTransactions = [...existingTransactions, newTransaction];
+
+        // Always update transactions array for current month
+        const isCurrentMonth = month === state.currentMonth;
+        let updatedTransactions = state.transactions;
+        if (isCurrentMonth) {
+          // Filter out any existing with same ID, then add new
+          updatedTransactions = [...state.transactions.filter(t => t.id !== newTransaction.id), newTransaction];
+        }
+
+        // Create new monthsData object to ensure React detects the change
+        const newMonthsData = { ...state.monthsData };
+        newMonthsData[month] = { transactions: [...updatedTargetTransactions] };
+
+        return {
+          transactions: updatedTransactions,
+          monthsData: newMonthsData,
+        };
+      });
     }
   },
 

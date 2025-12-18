@@ -19,6 +19,7 @@ interface TransactionFormProps {
   onHide: () => void;
   transaction?: Transaction | null;
   defaultType?: TransactionType;
+  onTransactionAdded?: (transaction: Transaction | null) => void;
 }
 
 export function TransactionForm({
@@ -26,6 +27,7 @@ export function TransactionForm({
   onHide,
   transaction,
   defaultType,
+  onTransactionAdded,
 }: TransactionFormProps) {
   const {
     categories,
@@ -70,12 +72,31 @@ export function TransactionForm({
 
   const [formData, setFormData] = useState(getInitialFormData);
 
+  // Atualiza o form quando o modal abre OU quando a transação muda
   useEffect(() => {
     if (show) {
       setFormData(getInitialFormData());
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [show, transaction]);
+  }, [show, getInitialFormData]);
+
+  // Efeito separado para quando a transação muda enquanto o modal está aberto
+  useEffect(() => {
+    if (show && transaction) {
+      setFormData({
+        description: transaction.description,
+        type: transaction.type,
+        category: transaction.category,
+        value: transaction.value.toString(),
+        date: transaction.date,
+        isRecurring: false,
+        recurrence_type: "fixed" as RecurrenceType,
+        day_of_month: "5",
+        total_installments: "",
+        end_date: "",
+        selected_income_id: "",
+      });
+    }
+  }, [transaction, show]);
 
   // Calculate the final value for variable_by_income in real-time
   const calculateVariableByIncomeValue = (): number => {
@@ -99,7 +120,7 @@ export function TransactionForm({
     return 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     let value: number;
@@ -131,7 +152,7 @@ export function TransactionForm({
     const isEditing = transaction && transaction.id;
 
     if (isEditing) {
-      updateTransaction(transaction.id, {
+      await updateTransaction(transaction.id, {
         description: formData.description,
         type: formData.type,
         category: formData.category,
@@ -140,7 +161,7 @@ export function TransactionForm({
       });
     } else {
       if (formData.isRecurring) {
-        addRecurringTransaction({
+        await addRecurringTransaction({
           description: formData.description,
           type: formData.type,
           category: formData.category,
@@ -157,13 +178,18 @@ export function TransactionForm({
         });
       } else {
         // This is where regular transactions should be added
-        addTransaction({
+        await addTransaction({
           description: formData.description,
           type: formData.type,
           category: formData.category,
           value,
           date: formData.date,
         });
+
+        // Chamar callback após adicionar transação (usado para esconder da lista de previstos)
+        if (onTransactionAdded) {
+          onTransactionAdded(transaction || null);
+        }
       }
     }
 
