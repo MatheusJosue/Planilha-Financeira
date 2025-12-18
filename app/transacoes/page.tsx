@@ -253,7 +253,12 @@ export default function TransactionsPage() {
   };
 
   const monthData = monthsData[currentMonth];
-  const currentTransactions = monthData?.transactions || [];
+  const allCurrentTransactions = monthData?.transactions || [];
+
+  // Filtrar apenas transações do mês atual (ignorar transações de outros meses que podem ter vazado)
+  const currentTransactions = allCurrentTransactions.filter(
+    (t) => t.date.substring(0, 7) === currentMonth
+  );
 
   // Calcular mês anterior
   const getPreviousMonth = (month: string) => {
@@ -284,41 +289,63 @@ export default function TransactionsPage() {
     .filter((t) => t.type === "expense" && !t.is_predicted && !t.recurring_id)
     .reduce((sum, t) => sum + t.value, 0);
 
-  const confirmedRecurringIncome = currentTransactions
+  // Coletar recurring_ids que já têm transações confirmadas
+  const confirmedRecurringIds = new Set(
+    currentTransactions
+      .filter((t) => !t.is_predicted && t.recurring_id)
+      .map((t) => t.recurring_id)
+  );
+
+  // Transações recorrentes confirmadas (usar apenas uma por recurring_id para evitar duplicatas)
+  const uniqueConfirmedRecurringIncome = currentTransactions
     .filter((t) => t.type === "income" && !t.is_predicted && t.recurring_id)
-    .reduce((sum, t) => sum + t.value, 0);
+    .reduce((acc, t) => {
+      // Se já temos uma transação para esse recurring_id, não adicionar novamente
+      if (!acc.seen.has(t.recurring_id!)) {
+        acc.seen.add(t.recurring_id!);
+        acc.total += t.value;
+        acc.count++;
+      }
+      return acc;
+    }, { seen: new Set<string>(), total: 0, count: 0 });
 
-  const confirmedRecurringExpense = currentTransactions
+  const uniqueConfirmedRecurringExpense = currentTransactions
     .filter((t) => t.type === "expense" && !t.is_predicted && t.recurring_id)
-    .reduce((sum, t) => sum + t.value, 0);
+    .reduce((acc, t) => {
+      if (!acc.seen.has(t.recurring_id!)) {
+        acc.seen.add(t.recurring_id!);
+        acc.total += t.value;
+        acc.count++;
+      }
+      return acc;
+    }, { seen: new Set<string>(), total: 0, count: 0 });
 
-  // Transações recorrentes previstas (ainda não confirmadas)
+  const confirmedRecurringIncome = uniqueConfirmedRecurringIncome.total;
+  const confirmedRecurringExpense = uniqueConfirmedRecurringExpense.total;
+
+  // Transações recorrentes previstas (apenas as que NÃO têm transação confirmada correspondente)
   const predictedRecurringIncome = currentTransactions
-    .filter((t) => t.type === "income" && t.is_predicted && t.recurring_id)
+    .filter((t) => t.type === "income" && t.is_predicted && t.recurring_id && !confirmedRecurringIds.has(t.recurring_id))
     .reduce((sum, t) => sum + t.value, 0);
 
   const predictedRecurringExpense = currentTransactions
-    .filter((t) => t.type === "expense" && t.is_predicted && t.recurring_id)
+    .filter((t) => t.type === "expense" && t.is_predicted && t.recurring_id && !confirmedRecurringIds.has(t.recurring_id))
     .reduce((sum, t) => sum + t.value, 0);
 
-  // Total de recorrentes (confirmadas + previstas)
+  // Total de recorrentes (confirmadas únicas + previstas não confirmadas)
   const totalRecurringIncome =
     confirmedRecurringIncome + predictedRecurringIncome;
   const totalRecurringExpense =
     confirmedRecurringExpense + predictedRecurringExpense;
 
-  // Contagem de transações recorrentes
-  const confirmedRecurringIncomeCount = currentTransactions.filter(
-    (t) => t.type === "income" && !t.is_predicted && t.recurring_id
-  ).length;
+  // Contagem de transações recorrentes (únicas)
+  const confirmedRecurringIncomeCount = uniqueConfirmedRecurringIncome.count;
   const predictedRecurringIncomeCount = currentTransactions.filter(
-    (t) => t.type === "income" && t.is_predicted && t.recurring_id
+    (t) => t.type === "income" && t.is_predicted && t.recurring_id && !confirmedRecurringIds.has(t.recurring_id)
   ).length;
-  const confirmedRecurringExpenseCount = currentTransactions.filter(
-    (t) => t.type === "expense" && !t.is_predicted && t.recurring_id
-  ).length;
+  const confirmedRecurringExpenseCount = uniqueConfirmedRecurringExpense.count;
   const predictedRecurringExpenseCount = currentTransactions.filter(
-    (t) => t.type === "expense" && t.is_predicted && t.recurring_id
+    (t) => t.type === "expense" && t.is_predicted && t.recurring_id && !confirmedRecurringIds.has(t.recurring_id)
   ).length;
 
   // Incluir TODAS as transações confirmadas (pontuais + recorrentes)
@@ -1218,6 +1245,15 @@ export default function TransactionsPage() {
                       Ações
                     </th>
                     <th
+                      style={{
+                        padding: "1rem",
+                        fontWeight: "600",
+                        fontSize: "0.9rem",
+                      }}
+                    >
+                      Valor
+                    </th>
+                    <th
                       className="text-start"
                       style={{
                         padding: "1rem",
@@ -1226,15 +1262,6 @@ export default function TransactionsPage() {
                       }}
                     >
                       Descrição
-                    </th>
-                    <th
-                      style={{
-                        padding: "1rem",
-                        fontWeight: "600",
-                        fontSize: "0.9rem",
-                      }}
-                    >
-                      Tipo
                     </th>
                     <th
                       style={{
@@ -1252,7 +1279,7 @@ export default function TransactionsPage() {
                         fontSize: "0.9rem",
                       }}
                     >
-                      Valor
+                      Tipo
                     </th>
                     <th
                       style={{
@@ -1315,42 +1342,7 @@ export default function TransactionsPage() {
                           <FiTrash2 />
                         </Button>
                       </td>
-                      <td className="text-start" style={{ padding: "1rem" }}>
-                        <span style={{ fontWeight: "500" }}>
-                          {transaction.description}
-                        </span>
-                      </td>
                       <td style={{ padding: "1rem" }}>
-                        <Badge
-                          bg={
-                            transaction.type === "income" ? "success" : "danger"
-                          }
-                          style={{
-                            padding: "6px 12px",
-                            borderRadius: "8px",
-                            fontWeight: "500",
-                            fontSize: "0.85rem",
-                          }}
-                        >
-                          {transaction.type === "income"
-                            ? "Receita"
-                            : "Despesa"}
-                        </Badge>
-                      </td>
-                      <td style={{ padding: "1rem" }}>
-                        <Badge
-                          bg="secondary"
-                          style={{
-                            padding: "6px 12px",
-                            borderRadius: "8px",
-                            fontWeight: "500",
-                            fontSize: "0.85rem",
-                          }}
-                        >
-                          {transaction.category}
-                        </Badge>
-                      </td>
-                      <td className="text-end" style={{ padding: "1rem" }}>
                         <span
                           className={
                             transaction.type === "income"
@@ -1369,6 +1361,41 @@ export default function TransactionsPage() {
                             </>
                           )}
                         </span>
+                      </td>
+                      <td className="text-start" style={{ padding: "1rem" }}>
+                        <span style={{ fontWeight: "500" }}>
+                          {transaction.description}
+                        </span>
+                      </td>
+                      <td style={{ padding: "1rem" }}>
+                        <Badge
+                          bg="secondary"
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: "8px",
+                            fontWeight: "500",
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          {transaction.category}
+                        </Badge>
+                      </td>
+                      <td style={{ padding: "1rem" }}>
+                        <Badge
+                          bg={
+                            transaction.type === "income" ? "success" : "danger"
+                          }
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: "8px",
+                            fontWeight: "500",
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          {transaction.type === "income"
+                            ? "Receita"
+                            : "Despesa"}
+                        </Badge>
                       </td>
                       <td style={{ padding: "1rem" }}>
                         <Badge

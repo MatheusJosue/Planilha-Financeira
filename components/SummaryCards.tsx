@@ -63,24 +63,50 @@ export function SummaryCards({ dashboardConfig }: SummaryCardsProps) {
   const monthData = monthsData[currentMonth];
   const currentTransactions = monthData?.transactions || [];
 
-  // Separar transações confirmadas e previstas
-  const confirmedTransactions = currentTransactions.filter(
-    (t) => !t.is_predicted
-  );
-  const predictedTransactions = currentTransactions.filter(
-    (t) => t.is_predicted
+  // Filtrar apenas transações do mês atual (ignorar transações de outros meses que podem ter vazado)
+  const transactionsOfCurrentMonth = currentTransactions.filter(
+    (t) => t.date.substring(0, 7) === currentMonth
   );
 
-  // Calcular totais de transações confirmadas
-  const totalIncome = confirmedTransactions
+  // Separar transações confirmadas e previstas
+  const confirmedTransactions = transactionsOfCurrentMonth.filter(
+    (t) => !t.is_predicted
+  );
+
+  // Coletar recurring_ids que já têm transações confirmadas
+  const confirmedRecurringIds = new Set(
+    confirmedTransactions
+      .filter((t) => t.recurring_id)
+      .map((t) => t.recurring_id)
+  );
+
+  // Transações previstas que NÃO têm uma transação confirmada correspondente
+  const predictedTransactions = transactionsOfCurrentMonth.filter(
+    (t) => t.is_predicted && (!t.recurring_id || !confirmedRecurringIds.has(t.recurring_id))
+  );
+
+  // Para transações confirmadas com recurring_id, usar apenas uma por recurring_id
+  const seenRecurringIds = new Set<string>();
+  const uniqueConfirmedTransactions = confirmedTransactions.filter((t) => {
+    if (t.recurring_id) {
+      if (seenRecurringIds.has(t.recurring_id)) {
+        return false; // Duplicata - ignorar
+      }
+      seenRecurringIds.add(t.recurring_id);
+    }
+    return true;
+  });
+
+  // Calcular totais de transações confirmadas (sem duplicatas)
+  const totalIncome = uniqueConfirmedTransactions
     .filter((t) => t.type === "income")
     .reduce((sum, t) => sum + t.value, 0);
 
-  const totalExpense = confirmedTransactions
+  const totalExpense = uniqueConfirmedTransactions
     .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + t.value, 0);
 
-  // Calcular totais de transações previstas (não confirmadas)
+  // Calcular totais de transações previstas (não confirmadas, sem duplicatas)
   const predictedIncome = predictedTransactions
     .filter((t) => t.type === "income")
     .reduce((sum, t) => sum + t.value, 0);
@@ -96,11 +122,17 @@ export function SummaryCards({ dashboardConfig }: SummaryCardsProps) {
 
   const expenseTransactionsPeriod1 = currentTransactions.filter((t) => {
     if (t.type !== "expense") return false;
+    // Verificar se a transação é do mês atual
+    const transactionMonth = t.date.substring(0, 7);
+    if (transactionMonth !== currentMonth) return false;
     const day = parseInt(t.date.split("-")[2], 10);
     return day <= period1End;
   });
   const expenseTransactionsPeriod2 = currentTransactions.filter((t) => {
     if (t.type !== "expense") return false;
+    // Verificar se a transação é do mês atual
+    const transactionMonth = t.date.substring(0, 7);
+    if (transactionMonth !== currentMonth) return false;
     const day = parseInt(t.date.split("-")[2], 10);
     return day >= period2Start;
   });
@@ -116,11 +148,17 @@ export function SummaryCards({ dashboardConfig }: SummaryCardsProps) {
 
   const incomeTransactionsPeriod1 = currentTransactions.filter((t) => {
     if (t.type !== "income") return false;
+    // Verificar se a transação é do mês atual
+    const transactionMonth = t.date.substring(0, 7);
+    if (transactionMonth !== currentMonth) return false;
     const day = parseInt(t.date.split("-")[2], 10);
     return day <= period1End;
   });
   const incomeTransactionsPeriod2 = currentTransactions.filter((t) => {
     if (t.type !== "income") return false;
+    // Verificar se a transação é do mês atual
+    const transactionMonth = t.date.substring(0, 7);
+    if (transactionMonth !== currentMonth) return false;
     const day = parseInt(t.date.split("-")[2], 10);
     return day >= period2Start;
   });

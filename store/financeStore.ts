@@ -113,10 +113,14 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
   categoryLimits: {},
   hiddenDefaultCategories: [],
   isLoaded: false,
-  currentMonth: loadSavedMonth() || getCurrentMonth(),
+  // Usar sempre getCurrentMonth() para evitar erro de hidratação SSR
+  // O mês salvo será carregado via loadFromSupabase() no cliente
+  currentMonth: getCurrentMonth(),
   monthsData: {},
   recurringTransactions: [],
-  excludedPredictedIds: loadExcludedIds(),
+  // Usar array vazio para evitar erro de hidratação SSR
+  // Os IDs excluídos serão carregados via loadFromSupabase() no cliente
+  excludedPredictedIds: [],
   showMonthPicker: false,
 
   setCurrentMonth: async (month: string) => {
@@ -351,6 +355,21 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
   loadFromSupabase: async (monthsToLoad: number = 1) => {
     if (typeof window === "undefined") return;
 
+    // Restaurar dados do localStorage (apenas no cliente, após hidratação)
+    const savedMonth = loadSavedMonth();
+    const savedExcludedIds = loadExcludedIds();
+    const updates: Partial<{ currentMonth: string; excludedPredictedIds: string[] }> = {};
+
+    if (savedMonth && savedMonth !== get().currentMonth) {
+      updates.currentMonth = savedMonth;
+    }
+    if (savedExcludedIds.length > 0) {
+      updates.excludedPredictedIds = savedExcludedIds;
+    }
+    if (Object.keys(updates).length > 0) {
+      set(updates);
+    }
+
     try {
       const supabaseClient = createClient();
       const { data: { user } } = await supabaseClient.auth.getUser();
@@ -407,7 +426,6 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       if (monthsToLoad === 1) {
         // Load only current month for better performance
         transactionsQuery = transactionsQuery.eq('month', selectedMonth);
-        console.log("[loadFromSupabase] Mês sendo consultado:", selectedMonth);
       } else if (monthsToLoad > 1) {
         // Load specified number of months (selected month + previous months)
         const monthsToQuery: string[] = [];
@@ -419,14 +437,10 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
         }
 
         transactionsQuery = transactionsQuery.in('month', monthsToQuery);
-        console.log("[loadFromSupabase] Meses sendo consultados:", monthsToQuery);
       }
 
       const { data: transactionsData, error } = await transactionsQuery
         .order('date', { ascending: false });
-
-      console.log("[loadFromSupabase] Transações carregadas:", transactionsData?.length || 0);
-      console.log("[loadFromSupabase] Transações:", transactionsData);
 
       if (error) {
         console.error("Error loading from Supabase:", error);
@@ -442,7 +456,8 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       }
 
       const monthsData: Record<string, MonthData> = {};
-      const currentMonth = getCurrentMonth();
+      // Usar o mês selecionado pelo usuário ao invés de getCurrentMonth()
+      const currentMonth = get().currentMonth || getCurrentMonth();
 
       await get().loadRecurringTransactions();
 
@@ -585,9 +600,6 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       showError("Erro ao adicionar transação. Verifique sua conexão.");
       return;
     }
-
-    console.log("[addTransaction] Dados salvos no Supabase:", data);
-    console.log("[addTransaction] Mês da transação:", month);
 
     if (data) {
       const newTransaction: Transaction = {
